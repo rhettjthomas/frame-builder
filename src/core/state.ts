@@ -9,9 +9,11 @@ import {
   clampQuantity,
   findIn,
   isCustomId,
+  SHIPPED_SECTIONS,
   type CustomDeliverable,
   type Library,
 } from './deliverables';
+import { safeFolder } from './delivery';
 import { DEFAULT_PRESET_ID, findPreset, presetIncludes, presetQuantity, type Preset } from './presets';
 
 export const STATE_KEY = 'frame-builder/state';
@@ -169,10 +171,24 @@ export function normalizeCustoms(raw: unknown): CustomDeliverable[] {
     if (!id || !name || width < 1 || height < 1 || seen.has(id)) continue;
     const safe = (c.safe ?? {}) as Record<string, unknown>;
     seen.add(id);
+
+    // A section the size invented travels with it. Fall back to the shipped pair
+    // when the stored section is unrecognisable, rather than inventing a folder.
+    const shipped = SHIPPED_SECTIONS.find((s) => s.id === c.section);
+    const section = typeof c.section === 'string' && c.section ? c.section : 'social-web';
+    const sectionLabel =
+      shipped?.label ??
+      (typeof c.sectionLabel === 'string' && c.sectionLabel.trim() ? c.sectionLabel.trim() : section);
+    const folder =
+      shipped?.folder ??
+      safeFolder(typeof c.folder === 'string' && c.folder.trim() ? c.folder : sectionLabel);
+
     out.push({
       id,
       name,
-      section: c.section === 'screens' ? 'screens' : 'social-web',
+      section: shipped?.id ?? section,
+      sectionLabel,
+      folder,
       width,
       height,
       safe: {

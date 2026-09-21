@@ -19,7 +19,11 @@ export type UIToMain =
       folderPrefix: boolean;
       /** Custom sizes in play, so the main thread can resolve them. */
       customs: CustomDeliverable[];
-    };
+    }
+  /** A selection command run from the window. */
+  | { type: 'command'; command: SelectionCommand };
+
+export type SelectionCommand = 'select-series' | 'retag' | 'untag';
 
 /** Main thread → UI iframe. */
 export type MainToUI =

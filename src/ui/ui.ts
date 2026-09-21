@@ -6,18 +6,23 @@
 import {
   clampQuantity,
   CUSTOM_PREFIX,
+  CUSTOM_SECTION_PREFIX,
   deliverablesIn,
   formatSafe,
   formatSize,
   isCustomId,
+  sectionLabel,
+  sectionsFor,
+  SHIPPED_SECTIONS,
+  SUGGESTED_SECTIONS,
   type CustomDeliverable,
   type Deliverable,
   type Library,
   type Section,
-  SECTION_LABELS,
 } from '../core/deliverables';
-import type { BuildItem, MainToUI, UIToMain } from '../core/messages';
+import type { BuildItem, MainToUI, SelectionCommand, UIToMain } from '../core/messages';
 import { allPresets, type Preset } from '../core/presets';
+import { safeFolder } from '../core/delivery';
 import { toSeriesId } from '../core/slug';
 import {
   frameCount,
@@ -28,8 +33,6 @@ import {
 } from '../core/state';
 
 declare const __VERSION__: string;
-
-const SECTIONS: Section[] = ['screens', 'social-web'];
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -62,6 +65,10 @@ const dom = {
   customSection: el<HTMLSelectElement>('custom-section'),
   customQuantity: el<HTMLInputElement>('custom-quantity'),
   customStatus: el('custom-status'),
+  customNewGroup: el('custom-new-group'),
+  customGroupName: el<HTMLInputElement>('custom-group-name'),
+  customFolderHint: el('custom-folder-hint'),
+  groupSuggestions: el('group-suggestions'),
   customSave: el<HTMLButtonElement>('custom-save'),
   presetsSheet: el('presets-sheet'),
   presetsClose: el<HTMLButtonElement>('presets-close'),
@@ -72,8 +79,14 @@ const dom = {
   presetsFileBtn: el<HTMLButtonElement>('presets-file-btn'),
   presetsFile: el<HTMLInputElement>('presets-file'),
   presetsLoad: el<HTMLButtonElement>('presets-load'),
-  presetName: el<HTMLInputElement>('preset-name'),
-  presetSave: el<HTMLButtonElement>('preset-save'),
+  presetsList: el('presets-list'),
+  presetsEmpty: el('presets-empty'),
+  presetsJson: el<HTMLDetailsElement>('presets-json'),
+  newPreset: el('new-preset'),
+  newPresetName: el<HTMLInputElement>('new-preset-name'),
+  newPresetSave: el<HTMLButtonElement>('new-preset-save'),
+  newPresetCancel: el<HTMLButtonElement>('new-preset-cancel'),
+  newPresetHint: el('new-preset-hint'),
 };
 
 let state: BuildState = stateFromPreset('sermon-series');
@@ -95,6 +108,8 @@ function library(): Library {
   return libraryFor(state);
 }
 
+const NEW_PRESET = '__new__';
+
 function renderPresets() {
   dom.preset.innerHTML = '';
   for (const preset of allPresets(state.savedPresets)) {
@@ -103,7 +118,16 @@ function renderPresets() {
     option.textContent = preset.name;
     dom.preset.appendChild(option);
   }
+  // Saving lives next to the list it adds to, rather than only in the menu.
+  const add = document.createElement('option');
+  add.value = NEW_PRESET;
+  add.textContent = 'Add new…';
+  dom.preset.appendChild(add);
   dom.preset.value = state.presetId;
+}
+
+function sections(): Section[] {
+  return sectionsFor(state.customs).map((s) => s.id);
 }
 
 function checkedCount(section: Section): number {
@@ -123,14 +147,15 @@ function renderGroupHead(section: Section, container: HTMLElement) {
   input.type = 'checkbox';
   input.checked = checked === all.length;
   input.indeterminate = checked > 0 && checked < all.length;
-  input.setAttribute('aria-label', `Check all in ${SECTION_LABELS[section]}`);
+  const label = sectionLabel(section, state.customs);
+  input.setAttribute('aria-label', `Check all in ${label}`);
   const box = document.createElement('span');
   box.className = 'check-box';
   check.append(input, box);
 
   const title = document.createElement('span');
   title.className = 'group-title';
-  title.textContent = SECTION_LABELS[section];
+  title.textContent = label;
 
   const count = document.createElement('span');
   count.className = 'group-count';
@@ -239,13 +264,16 @@ function renderRow(d: Deliverable, container: HTMLElement) {
 
 function renderChecklist() {
   dom.checklist.innerHTML = '';
-  for (const section of SECTIONS) {
+  for (const section of sections()) {
+    if (deliverablesIn(library(), section).length === 0) continue;
     const group = document.createElement('div');
     group.className = 'group';
     renderGroupHead(section, group);
+    const inSection = deliverablesIn(library(), section);
+    if (inSection.length === 0) continue;
     const rows = document.createElement('div');
     rows.className = 'rows';
-    for (const d of deliverablesIn(library(), section)) renderRow(d, rows);
+    for (const d of inSection) renderRow(d, rows);
     group.appendChild(rows);
     dom.checklist.appendChild(group);
   }
@@ -298,7 +326,44 @@ function showError(message: string) {
 
 /* ------------------------------------------------------------ custom sizes */
 
+const NEW_GROUP = '__new__';
+
+function renderGroupOptions() {
+  dom.customSection.innerHTML = '';
+  for (const section of sectionsFor(state.customs)) {
+    const option = document.createElement('option');
+    option.value = section.id;
+    option.textContent = section.label;
+    dom.customSection.appendChild(option);
+  }
+  const add = document.createElement('option');
+  add.value = NEW_GROUP;
+  add.textContent = 'Add new…';
+  dom.customSection.appendChild(add);
+
+  dom.groupSuggestions.innerHTML = '';
+  const taken = sectionsFor(state.customs).map((s) => s.label.toLowerCase());
+  for (const name of SUGGESTED_SECTIONS) {
+    if (taken.indexOf(name.toLowerCase()) !== -1) continue;
+    const option = document.createElement('option');
+    option.value = name;
+    dom.groupSuggestions.appendChild(option);
+  }
+}
+
+/** Show the name field only while "Add new…" is the chosen group. */
+function syncNewGroupField() {
+  const adding = dom.customSection.value === NEW_GROUP;
+  dom.customNewGroup.hidden = !adding;
+  const typed = dom.customGroupName.value.trim();
+  dom.customFolderHint.textContent =
+    adding && typed ? `Delivers to ${safeFolder(typed)}` : 'Also names the delivery folder.';
+  if (adding) dom.customGroupName.focus();
+}
+
 function openCustomSheet() {
+  renderGroupOptions();
+  dom.customGroupName.value = '';
   dom.customName.value = '';
   dom.customWidth.value = '';
   dom.customHeight.value = '';
@@ -307,6 +372,7 @@ function openCustomSheet() {
   dom.customSection.value = 'social-web';
   dom.customQuantity.value = '1';
   dom.customStatus.textContent = '';
+  syncNewGroupField();
   dom.customSheet.hidden = false;
   dom.customName.focus();
 }
@@ -327,12 +393,37 @@ function addCustomSize(): void {
     return fail(`There is already a deliverable called ${name}.`);
   }
 
+  // A new group lives only because a size uses it: it is carried by the size
+  // and by any preset that includes it, never added to the shipped list.
+  let section = dom.customSection.value;
+  let label = sectionLabel(section, state.customs);
+  let folder = sectionsFor(state.customs).find((s) => s.id === section)?.folder ?? 'EXTRAS';
+
+  if (section === NEW_GROUP) {
+    const typed = dom.customGroupName.value.trim();
+    if (!typed) return fail('Name the new group.');
+    const existing = sectionsFor(state.customs).find(
+      (s) => s.label.toLowerCase() === typed.toLowerCase(),
+    );
+    if (existing) {
+      section = existing.id;
+      label = existing.label;
+      folder = existing.folder;
+    } else {
+      section = `${CUSTOM_SECTION_PREFIX}${typed.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      label = typed;
+      folder = safeFolder(typed);
+    }
+  }
+
   const custom: CustomDeliverable = {
     // Time plus a random tail: unique enough across machines that two people
     // saving a preset on the same day can't collide.
     id: `${CUSTOM_PREFIX}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
     name,
-    section: dom.customSection.value === 'screens' ? 'screens' : 'social-web',
+    section,
+    sectionLabel: label,
+    folder,
     width,
     height,
     safe: {
@@ -356,17 +447,31 @@ function addCustomSize(): void {
 
 /* ---------------------------------------------------------------- presets */
 
+function openNewPreset() {
+  dom.newPreset.hidden = false;
+  dom.newPresetHint.hidden = false;
+  dom.newPresetHint.textContent = `Saves the ${frameCount(state)} frames you have checked.`;
+  dom.newPresetName.value = '';
+  dom.newPresetName.focus();
+}
+
+function closeNewPreset() {
+  dom.newPreset.hidden = true;
+  dom.newPresetHint.hidden = true;
+}
+
 /**
- * The checklist as it stands, saved under the name in the sheet. The name field
- * lives in the sheet rather than a prompt() because Figma's plugin iframe is
- * sandboxed without allow-modals, so a prompt would simply never appear.
+ * The checklist as it stands, saved under a name. The name is typed into the
+ * window rather than a prompt() because Figma's plugin iframe is sandboxed
+ * without allow-modals, so a prompt would simply never appear.
  */
-function savePresetFromChecklist() {
-  const name = dom.presetName.value.trim();
+function saveNamedPreset(rawName: string): boolean {
+  const name = rawName.trim();
   if (!name) {
-    dom.presetsStatus.textContent = 'Give the preset a name.';
-    dom.presetName.focus();
-    return;
+    dom.newPresetHint.hidden = false;
+    dom.newPresetHint.textContent = 'Give the preset a name.';
+    dom.newPresetName.focus();
+    return false;
   }
 
   const include = library()
@@ -395,19 +500,78 @@ function savePresetFromChecklist() {
     : [...state.savedPresets, preset];
   state.presetId = preset.id;
   save();
+  closeNewPreset();
   renderPresets();
   render();
-  dom.presetName.value = '';
+  showStatus(existing ? `Updated the preset "${name}".` : `Saved the preset "${name}".`);
+  return true;
+}
+
+function deletePreset(id: string) {
+  state.savedPresets = state.savedPresets.filter((p) => p.id !== id);
+  // Dropping the preset you were on falls back to the default rather than
+  // leaving the list pointing at something that no longer exists.
+  if (state.presetId === id) state.presetId = 'custom';
+  save();
+  renderPresets();
+  render();
+  renderPresetsSheet();
+}
+
+function renderPresetsSheet() {
+  dom.presetsList.innerHTML = '';
+  dom.presetsEmpty.hidden = state.savedPresets.length > 0;
+
+  for (const preset of state.savedPresets) {
+    const item = document.createElement('div');
+    item.className = 'preset-item';
+
+    const text = document.createElement('div');
+    text.className = 'preset-text';
+    const name = document.createElement('span');
+    name.className = 'preset-name';
+    name.textContent = preset.name;
+    const meta = document.createElement('span');
+    meta.className = 'preset-meta';
+    const count = preset.include === 'all' ? 'everything' : `${preset.include.length} checked`;
+    const customs = preset.customs?.length ?? 0;
+    meta.textContent = customs
+      ? `${count} · ${customs} custom ${customs === 1 ? 'size' : 'sizes'}`
+      : count;
+    text.append(name, meta);
+
+    const use = document.createElement('button');
+    use.type = 'button';
+    use.className = 'link';
+    use.textContent = 'Use';
+    use.addEventListener('click', () => {
+      const settings = state.settings;
+      state = stateFromPreset(preset.id, state.savedPresets, state.customs);
+      state.settings = settings;
+      save();
+      render();
+      dom.presetsSheet.hidden = true;
+    });
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'row-remove';
+    remove.textContent = '\u00d7';
+    remove.title = `Delete ${preset.name}`;
+    remove.setAttribute('aria-label', `Delete ${preset.name}`);
+    remove.addEventListener('click', () => deletePreset(preset.id));
+
+    item.append(text, use, remove);
+    dom.presetsList.appendChild(item);
+  }
+
   dom.presetsText.value = JSON.stringify(state.savedPresets, null, 2);
-  dom.presetsStatus.textContent = existing ? `Updated "${name}".` : `Saved "${name}".`;
 }
 
 function openPresetsSheet() {
-  dom.presetName.value = '';
-  dom.presetsText.value = JSON.stringify(state.savedPresets, null, 2);
-  dom.presetsStatus.textContent = state.savedPresets.length
-    ? ''
-    : 'No saved presets yet. Paste some here to load them.';
+  dom.presetsStatus.textContent = '';
+  dom.presetsJson.open = false;
+  renderPresetsSheet();
   dom.presetsSheet.hidden = false;
 }
 
@@ -432,9 +596,10 @@ function loadPresetsFromText() {
   save();
   renderPresets();
   render();
-  dom.presetsSheet.hidden = true;
+  renderPresetsSheet();
+  dom.presetsJson.open = false;
   const noun = incoming.length === 1 ? 'preset' : 'presets';
-  showStatus(`Loaded ${incoming.length} ${noun}.`);
+  dom.presetsStatus.textContent = `Loaded ${incoming.length} ${noun}.`;
 }
 
 function downloadPresets() {
@@ -477,7 +642,16 @@ document.addEventListener('click', (e) => {
 });
 
 dom.settingsMenu.addEventListener('click', (e) => {
-  const action = (e.target as HTMLElement).closest('button')?.dataset.action;
+  const button = (e.target as HTMLElement).closest('button');
+  const command = button?.dataset.command;
+  if (command) {
+    showError('');
+    showStatus('Working…');
+    post({ type: 'command', command: command as SelectionCommand });
+    closeMenu();
+    return;
+  }
+  const action = button?.dataset.action;
   if (action === 'folder-prefix') {
     state.settings.folderPrefix = !state.settings.folderPrefix;
     save();
@@ -502,11 +676,25 @@ dom.settingsMenu.addEventListener('click', (e) => {
 });
 
 dom.preset.addEventListener('change', () => {
+  if (dom.preset.value === NEW_PRESET) {
+    // Put the list back where it was: naming is the action, not a selection.
+    dom.preset.value = state.presetId;
+    openNewPreset();
+    return;
+  }
   const settings = state.settings;
   state = stateFromPreset(dom.preset.value, state.savedPresets, state.customs);
   state.settings = settings;
   save();
   render();
+});
+
+dom.newPresetSave.addEventListener('click', () => saveNamedPreset(dom.newPresetName.value));
+dom.newPresetCancel.addEventListener('click', closeNewPreset);
+dom.newPresetName.addEventListener('keydown', (e) => {
+  const key = (e as KeyboardEvent).key;
+  if (key === 'Enter') saveNamedPreset(dom.newPresetName.value);
+  if (key === 'Escape') closeNewPreset();
 });
 
 dom.seriesName.addEventListener('input', () => {
@@ -534,6 +722,8 @@ dom.customClose.addEventListener('click', () => {
   dom.customSheet.hidden = true;
 });
 dom.customSave.addEventListener('click', addCustomSize);
+dom.customSection.addEventListener('change', syncNewGroupField);
+dom.customGroupName.addEventListener('input', syncNewGroupField);
 dom.customSheet.addEventListener('keydown', (e) => {
   if ((e as KeyboardEvent).key === 'Enter') addCustomSize();
   if ((e as KeyboardEvent).key === 'Escape') dom.customSheet.hidden = true;
@@ -542,10 +732,7 @@ dom.customSheet.addEventListener('keydown', (e) => {
 dom.presetsClose.addEventListener('click', () => {
   dom.presetsSheet.hidden = true;
 });
-dom.presetSave.addEventListener('click', savePresetFromChecklist);
-dom.presetName.addEventListener('keydown', (e) => {
-  if ((e as KeyboardEvent).key === 'Enter') savePresetFromChecklist();
-});
+
 dom.presetsLoad.addEventListener('click', loadPresetsFromText);
 dom.presetsDownload.addEventListener('click', downloadPresets);
 dom.presetsCopy.addEventListener('click', () => {

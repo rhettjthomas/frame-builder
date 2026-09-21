@@ -9,7 +9,7 @@
  * Written against a minimal node shape rather than SceneNode so the rules can be
  * tested without a document.
  */
-import type { Group } from './deliverables';
+import type { Folder } from './deliverables';
 
 export const TAG = {
   seriesId: 'frame-builder/seriesId',
@@ -27,16 +27,26 @@ export interface TaggableNode {
 export interface SeriesTags {
   seriesId: string;
   deliverable: string;
-  group: Group;
+  /** Delivery folder, as it should appear on disk. */
+  folder: Folder;
   builderVersion: string;
 }
 
-const GROUPS: readonly Group[] = ['screens', 'social', 'web'];
+/**
+ * Frames built before v0.9.0 stored a lowercase group name rather than the
+ * folder itself. Read those as the folder they meant, so an old file still
+ * answers correctly.
+ */
+const LEGACY_GROUPS: Record<string, Folder> = {
+  screens: 'SCREENS',
+  social: 'SOCIAL MEDIA',
+  web: 'WEB',
+};
 
 export function stampTags(node: TaggableNode, tags: SeriesTags): void {
   node.setPluginData(TAG.seriesId, tags.seriesId);
   node.setPluginData(TAG.deliverable, tags.deliverable);
-  node.setPluginData(TAG.group, tags.group);
+  node.setPluginData(TAG.group, tags.folder);
   node.setPluginData(TAG.builderVersion, tags.builderVersion);
 }
 
@@ -48,13 +58,12 @@ export function readTags(node: TaggableNode): SeriesTags | null {
   const seriesId = node.getPluginData(TAG.seriesId);
   if (!seriesId) return null;
   const stored = node.getPluginData(TAG.group);
-  // An unknown group would send the frame to a folder that doesn't exist, so
-  // fall back to the one folder every package has.
-  const group = (GROUPS as readonly string[]).indexOf(stored) === -1 ? 'screens' : (stored as Group);
+  // A frame with no readable folder still has to land somewhere.
+  const folder = LEGACY_GROUPS[stored] ?? stored ?? '';
   return {
     seriesId,
     deliverable: node.getPluginData(TAG.deliverable),
-    group,
+    folder: folder || 'SCREENS',
     builderVersion: node.getPluginData(TAG.builderVersion),
   };
 }

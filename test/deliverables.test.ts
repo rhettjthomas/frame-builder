@@ -10,6 +10,10 @@ import {
   formatSafe,
   formatSize,
   isCustomId,
+  sectionLabel,
+  sectionsFor,
+  SHIPPED_SECTIONS,
+  SUGGESTED_SECTIONS,
   type CustomDeliverable,
 } from '../src/core/deliverables';
 
@@ -43,9 +47,10 @@ describe('the shipped library', () => {
     }
   });
 
-  it('routes Web to its own export folder and the rest of social to social', () => {
-    expect(findDeliverable('web')?.group).toBe('web');
-    expect(findDeliverable('story')?.group).toBe('social');
+  it('routes Web to its own delivery folder and the rest of social to SOCIAL MEDIA', () => {
+    expect(findDeliverable('web')?.folder).toBe('WEB');
+    expect(findDeliverable('story')?.folder).toBe('SOCIAL MEDIA');
+    expect(findDeliverable('hero-4k')?.folder).toBe('SCREENS');
   });
 
   it('builds lower thirds with no fill so they export transparent', () => {
@@ -111,6 +116,8 @@ describe('custom sizes', () => {
     id: 'custom:abc',
     name: 'Bulletin Insert',
     section: 'social-web',
+    sectionLabel: 'Social & Web',
+    folder: 'SOCIAL MEDIA',
     width: 1275,
     height: 1650,
     safe: { sides: 75, ends: 75 },
@@ -138,9 +145,9 @@ describe('custom sizes', () => {
     expect(buildLibrary()).toHaveLength(DELIVERABLES.length);
   });
 
-  it('delivers to SCREENS or SOCIAL MEDIA depending on its section', () => {
-    expect(customToDeliverable({ ...custom, section: 'screens' }).group).toBe('screens');
-    expect(customToDeliverable({ ...custom, section: 'social-web' }).group).toBe('social');
+  it('delivers to the folder it was given, whatever section it is in', () => {
+    expect(customToDeliverable({ ...custom, folder: 'SCREENS' }).folder).toBe('SCREENS');
+    expect(customToDeliverable({ ...custom, folder: 'PRINT' }).folder).toBe('PRINT');
   });
 
   it('is filled and photographic, like most of the library', () => {
@@ -163,5 +170,56 @@ describe('custom sizes', () => {
     expect(formatSize(d)).toBe('1275 × 1650');
     expect(formatSafe(d.safe)).toBe('75 all sides');
     expect(clampQuantity(d, 5)).toBe(1);
+  });
+});
+
+describe('sections', () => {
+  const printSize: CustomDeliverable = {
+    id: 'custom:print',
+    name: 'Bulletin',
+    section: 'section:print',
+    sectionLabel: 'Print',
+    folder: 'PRINT',
+    width: 2550,
+    height: 3300,
+    safe: { sides: 150, ends: 150 },
+    quantity: 1,
+  };
+
+  it('ships exactly the two the brief names', () => {
+    expect(SHIPPED_SECTIONS.map((s) => s.id)).toEqual(['screens', 'social-web']);
+  });
+
+  it('adds a section a custom size introduced, after the shipped pair', () => {
+    expect(sectionsFor([printSize]).map((s) => s.label)).toEqual([
+      'Screens',
+      'Social & Web',
+      'Print',
+    ]);
+  });
+
+  it('carries the new section folder, so it does not land in SOCIAL MEDIA', () => {
+    expect(sectionsFor([printSize])[2].folder).toBe('PRINT');
+  });
+
+  it('does not repeat a section two sizes share', () => {
+    const second = { ...printSize, id: 'custom:print2', name: 'Handout' };
+    expect(sectionsFor([printSize, second])).toHaveLength(3);
+  });
+
+  it('does not duplicate a shipped section a custom size sits in', () => {
+    const inShipped = { ...printSize, section: 'social-web', sectionLabel: 'Social & Web' };
+    expect(sectionsFor([inShipped])).toHaveLength(2);
+  });
+
+  it('labels a section it knows, and falls back to the id when it does not', () => {
+    expect(sectionLabel('screens')).toBe('Screens');
+    expect(sectionLabel('section:print', [printSize])).toBe('Print');
+    expect(sectionLabel('section:unknown')).toBe('section:unknown');
+  });
+
+  it('suggests groups without repeating the ones that ship', () => {
+    expect(SUGGESTED_SECTIONS).toContain('Print');
+    expect(SUGGESTED_SECTIONS).not.toContain('Screens');
   });
 });

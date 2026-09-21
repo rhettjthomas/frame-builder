@@ -79,10 +79,10 @@ describe('planFrames', () => {
 
   it('puts Screens above Social & Web', () => {
     const lastScreen = Math.max(
-      ...plan.frames.filter((f) => f.group === 'screens').map((f) => f.y + f.height),
+      ...plan.frames.filter((f) => f.folder === 'SCREENS').map((f) => f.y + f.height),
     );
     const firstSocial = Math.min(
-      ...plan.frames.filter((f) => f.group !== 'screens').map((f) => f.y),
+      ...plan.frames.filter((f) => f.folder !== 'SCREENS').map((f) => f.y),
     );
     expect(firstSocial).toBeGreaterThan(lastScreen);
   });
@@ -136,8 +136,8 @@ describe('planFrames', () => {
     expect(story.safe).toEqual({ sides: 100, ends: 250 });
   });
 
-  it('routes Web to its own export group', () => {
-    expect(plan.frames.find((f) => f.deliverableId === 'web')!.group).toBe('web');
+  it('routes Web to its own delivery folder', () => {
+    expect(plan.frames.find((f) => f.deliverableId === 'web')!.folder).toBe('WEB');
   });
 });
 

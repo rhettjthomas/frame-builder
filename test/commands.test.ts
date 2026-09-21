@@ -22,7 +22,7 @@ class FakeNode implements TaggableNode {
 
 function tagged(type: string, seriesId: string): FakeNode {
   const node = new FakeNode(type);
-  stampTags(node, { seriesId, deliverable: 'story', group: 'social', builderVersion: '0.8.0' });
+  stampTags(node, { seriesId, deliverable: 'story', folder: 'SOCIAL MEDIA', builderVersion: '0.8.0' });
   return node;
 }
 

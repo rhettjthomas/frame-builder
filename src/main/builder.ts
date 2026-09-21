@@ -96,7 +96,7 @@ function createFrame(
   stampTags(frame, {
     seriesId,
     deliverable: planned.deliverableId,
-    group: planned.group,
+    folder: planned.folder,
     builderVersion: version,
   });
   return frame;
@@ -117,7 +117,7 @@ export function buildSeries(
   section.name = seriesName;
   // The section is tagged too, so frames built by hand inside it can still be
   // adopted into the series even though they carry no tags of their own.
-  stampTags(section, { seriesId, deliverable: '', group: 'screens', builderVersion: version });
+  stampTags(section, { seriesId, deliverable: '', folder: 'SCREENS', builderVersion: version });
   section.resizeWithoutConstraints(plan.width, plan.height);
   const at = placementForSection(section);
   section.x = at.x;

@@ -109,6 +109,8 @@ describe('custom sizes in state', () => {
     id: 'custom:abc',
     name: 'Bulletin Insert',
     section: 'social-web',
+    sectionLabel: 'Social & Web',
+    folder: 'SOCIAL MEDIA',
     width: 1275,
     height: 1650,
     safe: { sides: 75, ends: 75 },
@@ -206,6 +208,8 @@ describe('saved presets in state', () => {
           id: 'custom:abc',
           name: 'Bulletin Insert',
           section: 'social-web',
+          sectionLabel: 'Social & Web',
+          folder: 'SOCIAL MEDIA',
           width: 1275,
           height: 1650,
           safe: { sides: 75, ends: 75 },
@@ -222,7 +226,9 @@ describe('saved presets in state', () => {
     const inPlay = {
       id: 'custom:keep',
       name: 'Keep Me',
-      section: 'screens' as const,
+      section: 'screens',
+      sectionLabel: 'Screens',
+      folder: 'SCREENS',
       width: 100,
       height: 100,
       safe: { sides: 0, ends: 0 },
@@ -236,5 +242,46 @@ describe('saved presets in state', () => {
   it('survives junk in place of the preset list', () => {
     expect(normalizeState({ savedPresets: 'nope' }).savedPresets).toEqual([]);
     expect(normalizeState({ savedPresets: [{ id: '', name: '' }] }).savedPresets).toEqual([]);
+  });
+});
+
+describe('custom sections from storage', () => {
+  const printSize = {
+    id: 'custom:print',
+    name: 'Bulletin',
+    section: 'section:print',
+    sectionLabel: 'Print',
+    folder: 'PRINT',
+    width: 2550,
+    height: 3300,
+    safe: { sides: 150, ends: 150 },
+    quantity: 1,
+  };
+
+  it('keeps a section a custom size invented', () => {
+    const state = normalizeState({ customs: [printSize] });
+    expect(state.customs[0].section).toBe('section:print');
+    expect(state.customs[0].folder).toBe('PRINT');
+  });
+
+  it('gives that size a checklist row of its own', () => {
+    expect(normalizeState({ customs: [printSize] }).rows['custom:print']).toBeDefined();
+  });
+
+  it('forces a shipped section back onto its shipped folder', () => {
+    const lying = { ...printSize, section: 'screens', sectionLabel: 'Nope', folder: 'NOPE' };
+    const state = normalizeState({ customs: [lying] });
+    expect(state.customs[0].sectionLabel).toBe('Screens');
+    expect(state.customs[0].folder).toBe('SCREENS');
+  });
+
+  it('derives a folder from the label when the stored one is unusable', () => {
+    const state = normalizeState({ customs: [{ ...printSize, folder: '   ' }] });
+    expect(state.customs[0].folder).toBe('PRINT');
+  });
+
+  it('cleans a folder name a file system would refuse', () => {
+    const state = normalizeState({ customs: [{ ...printSize, folder: 'Kids/Students' }] });
+    expect(state.customs[0].folder).toBe('KIDS-STUDENTS');
   });
 });

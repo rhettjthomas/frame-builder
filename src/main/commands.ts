@@ -100,7 +100,7 @@ export function retagSelection(version: string): string {
       seriesId,
       // Keep what it already claimed to be, if anything.
       deliverable: existing?.deliverable ?? '',
-      group: existing?.group ?? 'screens',
+      folder: existing?.folder ?? 'SCREENS',
       builderVersion: version,
     });
     adopted++;

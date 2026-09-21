@@ -4,11 +4,44 @@
  * preset, not in this list.
  */
 
-/** Which checklist section a deliverable appears under in the build dialog. */
-export type Section = 'screens' | 'social-web';
+/**
+ * Which checklist section a deliverable appears under. A string rather than a
+ * fixed pair, because a custom size can bring a section of its own: a church with
+ * a print or email habit shouldn't have to file those under Social & Web.
+ */
+export type Section = string;
 
-/** Which folder a deliverable lands in at export. Stamped on the frame as `group`. */
-export type Group = 'screens' | 'social' | 'web';
+/**
+ * The delivery folder a deliverable belongs in, as it should appear on disk.
+ * Stamped on the frame and used for the optional name prefix.
+ */
+export type Folder = string;
+
+export interface SectionDef {
+  id: Section;
+  label: string;
+  folder: Folder;
+}
+
+/** The two that ship. Anything else arrives with a custom size. */
+export const SHIPPED_SECTIONS: readonly SectionDef[] = [
+  { id: 'screens', label: 'Screens', folder: 'SCREENS' },
+  { id: 'social-web', label: 'Social & Web', folder: 'SOCIAL MEDIA' },
+];
+
+/**
+ * Folder names offered when adding a section, as a starting point rather than a
+ * rule. A church's package is its own; these are the ones that come up most.
+ */
+export const SUGGESTED_SECTIONS: readonly string[] = [
+  'Print',
+  'Email',
+  'Signage',
+  'Motion',
+  'Merch',
+  'Kids',
+  'Students',
+];
 
 export type Format = 'JPG' | 'PNG';
 
@@ -24,10 +57,10 @@ export interface SafeMargin {
 export interface Deliverable {
   /** Stamped on the frame as `deliverable`. Stable: renaming the display name won't break exports. */
   id: string;
-  /** Display name, also used in the frame name: `SeriesName_Name_01`. */
+  /** Display name, also used in the frame name: `SeriesName_Name 01`. */
   name: string;
   section: Section;
-  group: Group;
+  folder: Folder;
   width: number;
   height: number;
   safe: SafeMargin;
@@ -47,7 +80,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'hero-4k',
     name: 'Hero 4K',
     section: 'screens',
-    group: 'screens',
+    folder: 'SCREENS',
     width: 3840,
     height: 2160,
     safe: MARGIN_100,
@@ -60,7 +93,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'bg-blank',
     name: 'BG Blank',
     section: 'screens',
-    group: 'screens',
+    folder: 'SCREENS',
     width: 3840,
     height: 2160,
     safe: MARGIN_100,
@@ -73,7 +106,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'bg',
     name: 'BG',
     section: 'screens',
-    group: 'screens',
+    folder: 'SCREENS',
     width: 3840,
     height: 2160,
     safe: MARGIN_100,
@@ -86,7 +119,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'lower-third',
     name: 'Lower Third',
     section: 'screens',
-    group: 'screens',
+    folder: 'SCREENS',
     width: 1920,
     height: 1080,
     safe: NO_MARGIN,
@@ -99,7 +132,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'square',
     name: 'Square',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1080,
     safe: MARGIN_100,
@@ -112,7 +145,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'post',
     name: 'Post',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1350,
     safe: MARGIN_100,
@@ -125,7 +158,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'post-bg',
     name: 'PostBG',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1350,
     safe: MARGIN_100,
@@ -138,7 +171,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'story',
     name: 'Story',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1920,
     safe: { sides: 100, ends: 250 },
@@ -151,7 +184,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'story-bg',
     name: 'StoryBG',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1920,
     safe: { sides: 100, ends: 250 },
@@ -164,7 +197,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'web',
     name: 'Web',
     section: 'social-web',
-    group: 'web',
+    folder: 'WEB',
     width: 1920,
     height: 1080,
     safe: NO_MARGIN,
@@ -177,7 +210,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'youtube-cover',
     name: 'YouTube Cover',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 2560,
     height: 1440,
     // YouTube's all-devices safe area is 1546 x 423 centred, which is what the
@@ -192,7 +225,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'facebook-cover',
     name: 'Facebook Cover',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1640,
     height: 856,
     safe: MARGIN_100,
@@ -205,7 +238,7 @@ export const DELIVERABLES: readonly Deliverable[] = [
     id: 'carousel',
     name: 'Carousel',
     section: 'social-web',
-    group: 'social',
+    folder: 'SOCIAL MEDIA',
     width: 1080,
     height: 1350,
     safe: MARGIN_100,
@@ -216,10 +249,19 @@ export const DELIVERABLES: readonly Deliverable[] = [
   },
 ];
 
-export const SECTION_LABELS: Record<Section, string> = {
-  screens: 'Screens',
-  'social-web': 'Social & Web',
-};
+/** Every section in play: the two that ship, then any a custom size introduced. */
+export function sectionsFor(customs: readonly CustomDeliverable[] = []): SectionDef[] {
+  const out = [...SHIPPED_SECTIONS];
+  for (const c of customs) {
+    if (out.some((s) => s.id === c.section)) continue;
+    out.push({ id: c.section, label: c.sectionLabel, folder: c.folder });
+  }
+  return out;
+}
+
+export function sectionLabel(section: Section, customs: readonly CustomDeliverable[] = []): string {
+  return sectionsFor(customs).find((s) => s.id === section)?.label ?? section;
+}
 
 /**
  * A size the user added themselves. Kept separate from the shipped library and
@@ -230,11 +272,16 @@ export interface CustomDeliverable {
   id: string;
   name: string;
   section: Section;
+  /** Carried alongside the id so a shared preset can rebuild a section it invented. */
+  sectionLabel: string;
+  folder: Folder;
   width: number;
   height: number;
   safe: SafeMargin;
   quantity: number;
 }
+
+export const CUSTOM_SECTION_PREFIX = 'section:';
 
 export const CUSTOM_PREFIX = 'custom:';
 
@@ -248,9 +295,7 @@ export function customToDeliverable(c: CustomDeliverable): Deliverable {
     id: c.id,
     name: c.name,
     section: c.section,
-    // Screens deliver to SCREENS; everything else to SOCIAL MEDIA, which is
-    // where an unclassified social-or-web asset is least surprising.
-    group: c.section === 'screens' ? 'screens' : 'social',
+    folder: c.folder,
     width: c.width,
     height: c.height,
     safe: c.safe,

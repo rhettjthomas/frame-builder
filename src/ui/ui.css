@@ -427,3 +427,27 @@ input[type='number']:focus {
 
 .field-row input[type='text'] { flex: 1; min-width: 0; }
 .field-row .secondary { flex-shrink: 0; width: auto; padding: 0 12px; }
+
+/* Saved preset list */
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  padding: var(--space) calc(var(--space) * 1.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.preset-item + .preset-item { margin-top: 6px; }
+.preset-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.preset-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-meta { color: var(--text-secondary); font-size: 11px; }
+
+#presets-json summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+#presets-json summary:hover { color: var(--text); }
+#presets-json textarea { width: 100%; min-height: 120px; }
+#presets-json .secondary { width: 100%; margin-top: 6px; }

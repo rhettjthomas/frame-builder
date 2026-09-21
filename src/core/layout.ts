@@ -8,12 +8,11 @@ import {
   clampQuantity,
   findIn,
   type Deliverable,
-  type Group,
+  type Folder,
   type Library,
   type SafeMargin,
   type Section,
 } from './deliverables';
-import { folderFor } from './delivery';
 import type { BuildItem } from './messages';
 
 /** Space between frames in a row, and between rows. */
@@ -38,7 +37,7 @@ export interface PlannedFrame {
   y: number;
   fill: boolean;
   safe: SafeMargin;
-  group: Group;
+  folder: Folder;
 }
 
 export interface Plan {
@@ -47,8 +46,15 @@ export interface Plan {
   height: number;
 }
 
-/** Screens first, then Social & Web, as the brief specifies. */
-const SECTION_ORDER: readonly Section[] = ['screens', 'social-web'];
+/**
+ * Screens first, then Social & Web, then any section a custom size introduced,
+ * in the order the sizes were added.
+ */
+function sectionOrder(library: Library): Section[] {
+  const out: Section[] = [];
+  for (const d of library) if (out.indexOf(d.section) === -1) out.push(d.section);
+  return out;
+}
 
 /**
  * `SeriesName_Deliverable 01`. The space before the number is deliberate: Figma
@@ -68,7 +74,7 @@ export function frameName(
   folderPrefix = false,
 ): string {
   const base = `${seriesName}_${d.name} ${String(index).padStart(2, '0')}`;
-  return folderPrefix ? `${folderFor(d.group)}/${base}` : base;
+  return folderPrefix ? `${d.folder}/${base}` : base;
 }
 
 /** The checked deliverables in library order, each with how many frames it wants. */
@@ -110,7 +116,7 @@ export function planFrames(
     rowOpen = false;
   }
 
-  for (const section of SECTION_ORDER) {
+  for (const section of sectionOrder(library)) {
     const inSection = resolved.filter((r) => r.d.section === section);
     if (inSection.length === 0) continue;
 
@@ -142,7 +148,7 @@ export function planFrames(
           y: PADDING + cursorY,
           fill: d.fill,
           safe: d.safe,
-          group: d.group,
+          folder: d.folder,
         });
 
         contentRight = Math.max(contentRight, cursorX + d.width);

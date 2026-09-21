@@ -7,27 +7,6 @@
   "editorType": [
     "figma"
   ],
-  "menu": [
-    {
-      "name": "Build a series…",
-      "command": "build"
-    },
-    {
-      "separator": true
-    },
-    {
-      "name": "Select frames in this series",
-      "command": "select-series"
-    },
-    {
-      "name": "Add selection to this series",
-      "command": "retag"
-    },
-    {
-      "name": "Remove series tags from selection",
-      "command": "untag"
-    }
-  ],
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": [

@@ -23,6 +23,11 @@
     <button role="menuitem" data-action="share-presets">Presets (save, share, load)…</button>
     <button role="menuitem" data-action="reset">Reset checklist to preset</button>
     <div class="menu-sep" role="separator"></div>
+    <div class="menu-note">Works on what's selected in the file</div>
+    <button role="menuitem" data-command="select-series">Select frames in this series</button>
+    <button role="menuitem" data-command="retag">Add selection to this series</button>
+    <button role="menuitem" data-command="untag">Remove series tags from selection</button>
+    <div class="menu-sep" role="separator"></div>
     <div class="menu-note" id="menu-about"></div>
   </div>
 </header>
@@ -35,6 +40,12 @@
       <div class="select">
         <select id="preset"></select>
       </div>
+      <div class="field-row" id="new-preset" hidden>
+        <input id="new-preset-name" type="text" placeholder="Christmas Eve" autocomplete="off" />
+        <button type="button" class="secondary" id="new-preset-save">Save</button>
+        <button type="button" class="secondary" id="new-preset-cancel">Cancel</button>
+      </div>
+      <p class="field-help muted" id="new-preset-hint" hidden></p>
     </div>
 
     <div class="field">
@@ -96,16 +107,19 @@
       <div class="field">
         <label class="field-label" for="custom-section">Group</label>
         <div class="select">
-          <select id="custom-section">
-            <option value="screens">Screens</option>
-            <option value="social-web">Social &amp; Web</option>
-          </select>
+          <select id="custom-section"></select>
         </div>
       </div>
       <div class="field">
         <label class="field-label" for="custom-quantity">Quantity</label>
         <input id="custom-quantity" type="number" min="1" max="10" step="1" value="1" />
       </div>
+    </div>
+    <div class="field" id="custom-new-group" hidden>
+      <label class="field-label" for="custom-group-name">New group name</label>
+      <input id="custom-group-name" type="text" list="group-suggestions" placeholder="Print" autocomplete="off" />
+      <datalist id="group-suggestions"></datalist>
+      <p class="field-help muted" id="custom-folder-hint"></p>
     </div>
     <p class="sheet-status" id="custom-status" role="status" aria-live="polite"></p>
   </div>
@@ -119,18 +133,22 @@
       <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
   </div>
-  <div class="field">
-    <label class="field-label" for="preset-name">Save the current checklist as</label>
-    <div class="field-row">
-      <input id="preset-name" type="text" placeholder="Christmas Eve" autocomplete="off" />
-      <button type="button" class="secondary" id="preset-save">Save</button>
-    </div>
-  </div>
   <p class="sheet-help muted">
-    Your saved presets, custom sizes included. Copy this to another machine, or hand it to a
-    church's team so their work comes back to the same spec. Loading adds to what you have.
+    Your saved presets, custom sizes included. Copy or download this to another machine, or hand
+    it to a church's team so their work comes back to the same spec.
   </p>
-  <textarea id="presets-text" spellcheck="false" aria-label="Presets JSON"></textarea>
+  <div class="sheet-body">
+    <div id="presets-list"></div>
+    <div class="empty" id="presets-empty" hidden>
+      <strong>No saved presets yet</strong>
+      <span class="muted">Pick "Add new…" in the Preset list to save the checklist you have.</span>
+    </div>
+    <details id="presets-json">
+      <summary>Show the file</summary>
+      <textarea id="presets-text" spellcheck="false" aria-label="Presets JSON"></textarea>
+      <button type="button" class="secondary" id="presets-load">Load what is pasted here</button>
+    </details>
+  </div>
   <p class="sheet-status" id="presets-status" role="status" aria-live="polite"></p>
   <div class="sheet-actions">
     <button type="button" class="secondary" id="presets-copy">Copy</button>
@@ -138,7 +156,6 @@
     <button type="button" class="secondary" id="presets-file-btn">Load file…</button>
     <input type="file" id="presets-file" accept=".json,application/json,text/plain" hidden />
   </div>
-  <button type="button" class="primary" id="presets-load">Load presets</button>
 </div>
 
 <script>/*__JS__*/</script>

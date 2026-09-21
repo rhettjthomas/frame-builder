@@ -19,7 +19,7 @@ class FakeNode implements TaggableNode {
 const TAGS = {
   seriesId: 'hope-has-a-name',
   deliverable: 'story',
-  group: 'social',
+  folder: 'SOCIAL MEDIA',
   builderVersion: '0.3.0',
 } as const;
 
@@ -41,11 +41,27 @@ describe('stampTags and readTags', () => {
     expect(readTags(node)).toBeNull();
   });
 
-  it('falls back to a real folder when the group tag is unrecognised', () => {
+  it('keeps a folder it does not recognise, since folders are open-ended now', () => {
     const node = new FakeNode();
     stampTags(node, TAGS);
-    node.setPluginData(TAG.group, 'podcast');
-    expect(readTags(node)!.group).toBe('screens');
+    node.setPluginData(TAG.group, 'PRINT');
+    expect(readTags(node)!.folder).toBe('PRINT');
+  });
+
+  it('reads a pre-0.9.0 lowercase group as the folder it meant', () => {
+    const node = new FakeNode();
+    stampTags(node, TAGS);
+    node.setPluginData(TAG.group, 'social');
+    expect(readTags(node)!.folder).toBe('SOCIAL MEDIA');
+    node.setPluginData(TAG.group, 'web');
+    expect(readTags(node)!.folder).toBe('WEB');
+  });
+
+  it('falls back to a real folder when there is none stored at all', () => {
+    const node = new FakeNode();
+    stampTags(node, TAGS);
+    node.setPluginData(TAG.group, '');
+    expect(readTags(node)!.folder).toBe('SCREENS');
   });
 });
 
