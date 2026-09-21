@@ -51,6 +51,46 @@ async function sendInit() {
   post({ type: 'init', state: await loadState(), version: __VERSION__ });
 }
 
+/* ------------------------------------------------------------ export search */
+
+/** Whether the UI is sitting on the Export tab and wants to stay current. */
+let watchingExport = false;
+let rescanTimer: ReturnType<typeof setTimeout> | null = null;
+let watchingDocument = false;
+
+async function rescan() {
+  post({ type: 'found', series: await findAllSeries() });
+  watchDocument();
+}
+
+/**
+ * Keep the Export tab current without the user pressing Rescan. Only registered
+ * after the first search, because documentchange needs every page loaded, and
+ * only acted on while the Export tab is open, so an ordinary design session
+ * isn't searching the whole file after every nudge of a layer.
+ */
+function watchDocument() {
+  if (watchingDocument) return;
+  watchingDocument = true;
+  figma.on('documentchange', (event) => {
+    if (!watchingExport) return;
+    // Style edits can't change which frames belong to a series.
+    const touchesNodes = event.documentChanges.some(
+      (c) => c.type === 'CREATE' || c.type === 'DELETE' || c.type === 'PROPERTY_CHANGE',
+    );
+    if (!touchesNodes) return;
+    if (rescanTimer !== null) clearTimeout(rescanTimer);
+    // Canvas edits arrive in bursts; one search after the burst is enough.
+    rescanTimer = setTimeout(() => {
+      rescanTimer = null;
+      rescan().catch((err) => {
+        console.error('[Frame Builder]', err);
+        post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+      });
+    }, 500);
+  });
+}
+
 async function handle(msg: UIToMain) {
   switch (msg.type) {
     case 'ui-ready':
@@ -59,11 +99,13 @@ async function handle(msg: UIToMain) {
     case 'save-state':
       await saveState(msg.state);
       break;
-    case 'scan': {
+    case 'scan':
       post({ type: 'scanning' });
-      post({ type: 'found', series: await findAllSeries() });
+      await rescan();
       break;
-    }
+    case 'watch-export':
+      watchingExport = msg.on;
+      break;
     case 'select-node':
       await revealNode(msg.nodeId);
       break;
@@ -74,7 +116,7 @@ async function handle(msg: UIToMain) {
       figma.notify(`Frame Builder: built ${label} for "${msg.seriesName}"`);
       post({ type: 'status', message: `Built ${label} in "${msg.seriesName}".` });
       // The export tab's picture of the file is now stale.
-      post({ type: 'found', series: await findAllSeries() });
+      await rescan();
       break;
     }
   }

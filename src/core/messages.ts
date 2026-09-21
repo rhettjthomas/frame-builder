@@ -14,6 +14,8 @@ export type UIToMain =
   | { type: 'build'; seriesName: string; seriesId: string; items: BuildItem[] }
   /** Search the whole file for tagged frames and sections. */
   | { type: 'scan' }
+  /** Whether the Export tab is open and wants to stay current. */
+  | { type: 'watch-export'; on: boolean }
   /** Select a found frame in the file. */
   | { type: 'select-node'; nodeId: string };
 

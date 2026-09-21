@@ -10,12 +10,14 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-Milestone 4 of 7 (v0.4.0). Build creates the frames: correctly sized and named,
+Milestone 4 of 7 (v0.4.1). Build creates the frames: correctly sized and named,
 white filled except Lower Thirds, unsafe margins marked with layout grids,
 arranged in a titled section, and every frame tagged with its series.
 
 The Export tab finds every tagged frame across every page, groups them by
 deliverable type with counts, and lets frames be excluded without deleting them.
+It keeps itself current: opening the tab searches the file, and while the tab is
+open a canvas edit triggers a fresh search.
 Writing the files and zipping them is the next milestone, so the Export button is
 still disabled.
 

@@ -409,7 +409,9 @@ function selectTab(which: 'build' | 'export') {
   dom.panelExport.hidden = build;
   dom.buildBtn.hidden = !build;
   dom.exportBtn.hidden = build;
-  if (!build && !scanned) post({ type: 'scan' });
+  // Opening the tab is itself a request for a current picture of the file.
+  post({ type: 'watch-export', on: !build });
+  if (!build) post({ type: 'scan' });
 }
 
 function closeMenu() {
