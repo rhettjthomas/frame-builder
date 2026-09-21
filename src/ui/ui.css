@@ -325,3 +325,6 @@ input[type='text']:focus, select:focus {
   font-size: 10px;
 }
 .tag.warn { color: var(--text-warning); }
+
+.progress { height: 4px; margin-top: 6px; border-radius: 2px; background: var(--bg-secondary); overflow: hidden; }
+.progress-bar { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }

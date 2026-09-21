@@ -5,6 +5,7 @@
 import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY, type BuildState } from './core/state';
 import { buildSeries } from './main/builder';
+import { exportFrames } from './main/exporter';
 import { findAllSeries, revealNode } from './main/finder';
 
 declare const __VERSION__: string;
@@ -91,6 +92,22 @@ function watchDocument() {
   });
 }
 
+/* ------------------------------------------------------------------ export */
+
+/** Set when the UI reports it can no longer write, to stop rendering early. */
+let exportAborted: string | null = null;
+/** Resolves when the UI acknowledges the file it was just sent. */
+let drain: (() => void) | null = null;
+
+function waitForDrain(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    drain = () => {
+      drain = null;
+      resolve();
+    };
+  });
+}
+
 async function handle(msg: UIToMain) {
   switch (msg.type) {
     case 'ui-ready':
@@ -105,6 +122,31 @@ async function handle(msg: UIToMain) {
       break;
     case 'watch-export':
       watchingExport = msg.on;
+      break;
+    case 'export-abort':
+      // The UI hit a write error; stop rendering rather than burning through the
+      // rest of a 4K series with nowhere to put it.
+      exportAborted = msg.reason;
+      break;
+    case 'export': {
+      exportAborted = null;
+      const summary = await exportFrames(msg.nodeIds, async (file, done, total) => {
+        if (exportAborted) throw new Error(exportAborted);
+        post({ type: 'progress', done, total, label: `Exporting ${done} of ${total}` });
+        post({ type: 'export-file', nodeId: file.nodeId, path: file.path, bytes: file.bytes });
+        // Let the UI's write settle before rendering the next frame, so the
+        // queue can't outrun the disk on a large series.
+        await waitForDrain();
+      });
+      post({
+        type: 'export-done',
+        written: summary.written,
+        failures: summary.failures.map((f) => ({ name: f.name, reason: f.reason })),
+      });
+      break;
+    }
+    case 'file-written':
+      drain?.();
       break;
     case 'select-node':
       await revealNode(msg.nodeId);

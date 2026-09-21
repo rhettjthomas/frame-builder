@@ -24,6 +24,13 @@ import type { BuildItem, MainToUI, UIToMain } from '../core/messages';
 import { SHIPPED_PRESETS } from '../core/presets';
 import { frameCount, stateFromPreset, type BuildState } from '../core/state';
 import { toSeriesId } from '../core/slug';
+import {
+  FolderCancelled,
+  FolderUnavailable,
+  pickFolder,
+  preparePackage,
+  writeFile,
+} from './folder';
 
 declare const __VERSION__: string;
 
@@ -58,6 +65,9 @@ const dom = {
   confirm: el('confirm'),
   exportEmpty: el('export-empty'),
   rescan: el<HTMLButtonElement>('rescan'),
+  statusCount: el('status-count'),
+  progress: el('progress'),
+  progressBar: el<HTMLElement>('progress-bar'),
 };
 
 let state: BuildState = stateFromPreset('sermon-series');
@@ -70,6 +80,9 @@ let activeSeriesId = '';
 /** Frames the user has unchecked, by node id. Excluded without being deleted. */
 const excluded = new Set<string>();
 let scanned = false;
+/** The chosen package folder while an export is running. */
+let exportTarget: Awaited<ReturnType<typeof preparePackage>> | null = null;
+let exporting = false;
 
 function post(msg: UIToMain) {
   parent.postMessage({ pluginMessage: msg }, '*');
@@ -397,16 +410,23 @@ function renderExport() {
   }
 
   dom.exportBtn.textContent = included === 1 ? 'Export 1 frame' : `Export ${included} frames`;
-  // Exporting itself is the next milestone; finding and confirming is this one.
-  dom.exportBtn.disabled = true;
-  dom.exportBtn.title = 'Exporting arrives in the next milestone';
+  dom.exportBtn.disabled = exporting || included === 0 || clashes.size > 0;
+  dom.exportBtn.title = clashes.size > 0 ? 'Two frames share a name; rename one first' : '';
 }
 
 /* ------------------------------------------------------------------ notices */
 
-function showStatus(message: string) {
+function showStatus(message: string, count = '') {
   dom.statusLabel.textContent = message;
+  dom.statusCount.textContent = count;
   dom.status.hidden = !message;
+  if (!message) dom.progress.hidden = true;
+}
+
+function showProgress(done: number, total: number, label: string) {
+  showStatus(label, `${done} of ${total}`);
+  dom.progress.hidden = false;
+  dom.progressBar.style.width = `${total ? (done / total) * 100 : 0}%`;
 }
 
 function showError(message: string) {
@@ -504,6 +524,34 @@ dom.buildBtn.addEventListener('click', () => {
   post({ type: 'build', seriesName, seriesId, items: buildItems() });
 });
 
+dom.exportBtn.addEventListener('click', async () => {
+  const series = activeSeries();
+  if (!series || exporting) return;
+  const nodeIds = series.frames.filter((f) => !excluded.has(f.nodeId)).map((f) => f.nodeId);
+  if (nodeIds.length === 0) return;
+
+  showError('');
+  let target;
+  try {
+    // Straight off the click: the picker needs user activation.
+    target = await preparePackage(await pickFolder(), series.label);
+  } catch (err) {
+    if (err instanceof FolderCancelled) return;
+    if (err instanceof FolderUnavailable) {
+      showError(`Figma will not let the plugin choose a folder. ${err.message}`);
+      return;
+    }
+    showError(err instanceof Error ? err.message : String(err));
+    return;
+  }
+
+  exportTarget = target;
+  exporting = true;
+  renderExport();
+  showProgress(0, nodeIds.length, 'Exporting');
+  post({ type: 'export', nodeIds });
+});
+
 window.addEventListener('message', (event: MessageEvent) => {
   const msg = event.data?.pluginMessage as MainToUI | undefined;
   if (!msg) return;
@@ -529,6 +577,37 @@ window.addEventListener('message', (event: MessageEvent) => {
       renderSeriesPicker();
       renderExport();
       showStatus('');
+      break;
+    }
+    case 'progress':
+      showProgress(msg.done, msg.total, msg.label);
+      break;
+    case 'export-file':
+      void (async () => {
+        try {
+          if (!exportTarget) throw new Error('No destination folder.');
+          await writeFile(exportTarget, msg.path, msg.bytes);
+          post({ type: 'file-written' });
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          showError(`Could not write ${msg.path}. ${reason}`);
+          post({ type: 'export-abort', reason });
+          post({ type: 'file-written' });
+        }
+      })();
+      break;
+    case 'export-done': {
+      exporting = false;
+      exportTarget = null;
+      const noun = msg.written === 1 ? 'file' : 'files';
+      showStatus(`Exported ${msg.written} ${noun}.`);
+      if (msg.failures.length > 0) {
+        showError(
+          `${msg.failures.length} did not export: ` +
+            msg.failures.map((f) => `${f.name} (${f.reason})`).join(', '),
+        );
+      }
+      renderExport();
       break;
     }
     case 'status':

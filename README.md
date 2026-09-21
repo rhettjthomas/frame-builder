@@ -10,7 +10,7 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-Milestone 4 of 7 (v0.4.1). Build creates the frames: correctly sized and named,
+Milestone 5 of 7 (v0.5.0). Build creates the frames: correctly sized and named,
 white filled except Lower Thirds, unsafe margins marked with layout grids,
 arranged in a titled section, and every frame tagged with its series.
 
@@ -18,8 +18,14 @@ The Export tab finds every tagged frame across every page, groups them by
 deliverable type with counts, and lets frames be excluded without deleting them.
 It keeps itself current: opening the tab searches the file, and while the tab is
 open a canvas edit triggers a fresh search.
-Writing the files and zipping them is the next milestone, so the Export button is
-still disabled.
+Export writes the delivery package straight into a folder you choose, rather than
+producing a ZIP: SCREENS, SOCIAL MEDIA and WEB filled from each frame's group tag,
+plus empty VIDEOS and PROPRESENTER folders. Lower Thirds go out as PNG, everything
+else as JPG, at native size. Layer names are never rewritten, so a frame renamed
+by hand keeps its name and still lands in the right folder.
+
+Choosing a folder relies on the File System Access API, which Figma's sandbox may
+refuse. If it does, the plugin says so rather than failing quietly.
 
 ## Running it
 
