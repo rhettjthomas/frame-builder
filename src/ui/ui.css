@@ -274,7 +274,7 @@ input[type='text']:focus, select:focus {
 .primary:hover:not(:disabled) { background: var(--accent-hover); }
 .primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Export tab */
+/* Sheets and secondary fields */
 .field-head { display: flex; align-items: baseline; gap: var(--space); }
 .field-head .field-label { flex: 1; }
 

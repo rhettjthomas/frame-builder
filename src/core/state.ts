@@ -83,8 +83,6 @@ export function stateFromPreset(
   };
 }
 
-export const DEFAULT_STATE = stateFromPreset(DEFAULT_PRESET_ID);
-
 /**
  * Merge stored state over the default, dropping unknown deliverables and
  * clamping quantities. Never throws: bad storage falls back to the default.

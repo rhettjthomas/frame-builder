@@ -1,4 +1,4 @@
-import { DELIVERABLES, type CustomDeliverable, type Deliverable } from './deliverables';
+import type { CustomDeliverable, Deliverable } from './deliverables';
 
 export interface Preset {
   id: string;
@@ -60,6 +60,3 @@ export function presetQuantity(preset: Preset, d: Deliverable): number {
   if (typeof override === 'number') return override;
   return d.quantity ? d.quantity.default : 1;
 }
-
-/** Every deliverable id the shipped library knows about. */
-export const ALL_DELIVERABLE_IDS = DELIVERABLES.map((d) => d.id);

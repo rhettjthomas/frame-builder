@@ -1,27 +1,78 @@
 # Frame Builder
 
-A Figma plugin that generates every deliverable frame for a sermon series in one
-click, tags them so duplicates stay traceable, and later exports the whole set as
-a zipped delivery package.
+A Figma plugin that builds every deliverable frame for a sermon series in one
+click, correctly sized, correctly named, and set up so Figma's own export
+delivers them in organized folders.
 
 It pairs with [PSD Bridge](https://github.com/rhettjthomas/psd-bridge). Bring the
 hero art into Figma with PSD Bridge, run Frame Builder to lay out the
 deliverables, drag the art into place, and export the set.
 
-## Status
+## What it does
 
-v0.9.2. Feature complete for a first Community release: builds the frames, sets
-them up for Figma's own export, handles custom sizes and custom groups, saves and
-shares presets, and has selection commands for working with a series afterwards.
+Setting up 8 to 20 correctly sized, correctly named frames for every series is
+repetitive work, and the export step usually means hand-selecting frames and
+hoping none were missed. Frame Builder does the setup and keeps track of the
+frames afterwards.
 
-Frame Builder does not export. A Figma plugin cannot write to a folder the user
-chooses, and Figma's own export can, so the plugin's job is to make that export
-correct rather than to reinvent it: every frame is built carrying the right
-format at full size, so selecting the section and hitting Export just works. A
-setting prefixes each frame name with its delivery folder, because Figma turns a
-slash in a layer name into a subfolder when several layers are exported at once.
+**Building.** Check the deliverables you want, name the series, and it creates
+them: white filled, safe margins marked, arranged in a titled section, each
+carrying the right export format at full size. A deliverable with several frames
+gets its own row in the layout, because a carousel split across two rows reads as
+a mistake rather than a set.
 
-## Running it
+**Safe margins** are Figma layout grids rather than drawn rectangles. They mark
+the unsafe edges and leave the safe area clear, they render above whatever art
+you drag in, and they never rasterize into an export, so there is nothing to hide
+or delete before delivery.
+
+**Delivery folders.** A setting, on by default, prefixes each frame name with its
+delivery path:
+
+```
+HOPE HAS A NAME/SCREENS/Hope Has a Name_Hero 4K 01
+```
+
+Figma nests a folder per slash when several layers are exported at once, so
+selecting the section and exporting produces the whole package: the series in its
+own folder, with SCREENS, SOCIAL MEDIA and WEB inside it. Frame Builder does not
+export anything itself. A plugin cannot write to a folder you choose and Figma
+can, so the plugin's job is to make Figma's export correct rather than to
+reinvent it.
+
+**Custom sizes and presets.** Add a size of your own, optionally in a group of
+its own, and a group names its own delivery folder. Save a checklist as a preset,
+and share presets as JSON between machines or with a church's team. A preset
+carries the custom sizes it uses, so it arrives complete rather than referring to
+sizes the other person doesn't have.
+
+## Keeping track of frames
+
+The hard part is not creating frames. It is knowing, weeks later, which frames
+belong to the series, including ones duplicated after the build.
+
+A saved list of node ids would be a guest list at the door: anyone who arrives
+later isn't on it. Figma copies plugin data when a node is duplicated, so every
+frame carries its own tag instead, and a duplicate inherits it. Frames are named
+`SeriesName_Deliverable 01`, with a space before the number, so Figma's own
+increment continues the sequence when you duplicate one by hand. Nothing ever
+renames your layers behind your back.
+
+## Selection commands
+
+**Select frames in this series** has a button under the Build button. Select one
+frame of the series and it selects the rest on that page, and says how many are
+on other pages, since Figma's selection cannot span pages.
+
+The rest are in the settings menu:
+
+- **Add or remove delivery folders** on a series that already exists, so deciding
+  about folders after the fact doesn't mean rebuilding.
+- **Add selection to this series** adopts hand-built frames. The series comes
+  from the section they sit in, or from a tagged frame selected alongside them.
+- **Remove series tags from selection** for art repurposed out of a series.
+
+## Development
 
 ```
 npm install
@@ -29,7 +80,8 @@ npm run watch
 ```
 
 Then in Figma: Plugins, Development, Import plugin from manifest, and pick
-`manifest.json`.
+`manifest.json`. Re-import rather than re-run whenever the manifest itself
+changes.
 
 The manifest carries a placeholder `id`. It needs one even in development,
 because `figma.clientStorage` is namespaced by plugin ID and refuses to read or
@@ -38,37 +90,13 @@ the plugin through Plugins, Development, New plugin, and copy the `id` out of th
 manifest it generates. Swapping the ID starts the saved checklist from the
 defaults once, which is harmless.
 
-Presets save per machine and export as JSON, so a preset can move between
-machines or be handed to a church's team. A preset carries the custom sizes it
-uses inline, so it arrives complete rather than referring to sizes the other
-person doesn't have.
-
 Other scripts: `npm run build` for a one-off minified build, `npm run typecheck`,
 and `npm test`.
 
-## Selection commands
+The plugin declares no network access and never sends anything anywhere. Presets
+and settings are stored with `figma.clientStorage`, which is local to your
+machine.
 
-Select frames in this series has a button under the settings gear, since it is
-the one used constantly. The rest are in the settings menu. Each works from the
-current selection rather than asking a question.
+---
 
-- **Select frames in this series** — select one frame of the series and this
-  selects the rest on that page, reporting how many are on other pages. Figma's
-  selection can only hold nodes from one page, so the ones elsewhere are counted
-  rather than silently left out.
-- **Add selection to this series** — adopts hand-built frames. The series comes
-  from the section they sit in, or from a tagged frame selected alongside them.
-- **Remove series tags from selection** — for art repurposed out of a series.
-
-## How it tracks frames
-
-Setting up 8 to 18 correctly sized, correctly named frames for every series is
-repetitive, and the export step usually means hand-selecting frames and hoping
-none were missed. The hard part is not creating the frames. It is knowing, weeks
-later, which frames belong to the series, including ones duplicated after the
-build.
-
-Figma copies plugin data when a node is duplicated, so every frame the builder
-creates is stamped with its own tags and duplicates inherit them automatically.
-The export searches by tag instead of by page, which also means it works the same
-whether the frames sit on one page or five.
+By [Midwood Road LLC](https://midwoodroad.com). Free to use.
