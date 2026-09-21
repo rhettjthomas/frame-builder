@@ -5,6 +5,7 @@
 import type { SafeMargin } from '../core/deliverables';
 import { planFrames, type PlannedFrame } from '../core/layout';
 import type { BuildItem } from '../core/messages';
+import { stampTags } from '../core/tags';
 
 const WHITE: SolidPaint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } };
 
@@ -70,7 +71,7 @@ function placementForSection(section: SectionNode): { x: number; y: number } {
   return { x: Math.round(right + 400), y: Math.round(top) };
 }
 
-function createFrame(planned: PlannedFrame): FrameNode {
+function createFrame(planned: PlannedFrame, seriesId: string, version: string): FrameNode {
   const frame = figma.createFrame();
   frame.name = planned.name;
   frame.resize(planned.width, planned.height);
@@ -78,15 +79,29 @@ function createFrame(planned: PlannedFrame): FrameNode {
   frame.fills = planned.fill ? [WHITE] : [];
   frame.layoutGrids = safeGrids(planned.safe);
   frame.clipsContent = true;
+  stampTags(frame, {
+    seriesId,
+    deliverable: planned.deliverableId,
+    group: planned.group,
+    builderVersion: version,
+  });
   return frame;
 }
 
-export function buildSeries(seriesName: string, items: readonly BuildItem[]): BuildResult {
+export function buildSeries(
+  seriesName: string,
+  seriesId: string,
+  items: readonly BuildItem[],
+  version: string,
+): BuildResult {
   const plan = planFrames(seriesName, items);
   if (plan.frames.length === 0) throw new Error('Nothing was checked, so there is nothing to build.');
 
   const section = figma.createSection();
   section.name = seriesName;
+  // The section is tagged too, so frames built by hand inside it can still be
+  // adopted into the series even though they carry no tags of their own.
+  stampTags(section, { seriesId, deliverable: '', group: 'screens', builderVersion: version });
   section.resizeWithoutConstraints(plan.width, plan.height);
   const at = placementForSection(section);
   section.x = at.x;
@@ -94,7 +109,7 @@ export function buildSeries(seriesName: string, items: readonly BuildItem[]): Bu
 
   const frames: FrameNode[] = [];
   for (const planned of plan.frames) {
-    const frame = createFrame(planned);
+    const frame = createFrame(planned, seriesId, version);
     // Append first: x and y are relative to the containing parent, so they only
     // mean what the plan intends once the frame is inside the section.
     section.appendChild(frame);

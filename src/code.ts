@@ -59,7 +59,7 @@ async function handle(msg: UIToMain) {
       await saveState(msg.state);
       break;
     case 'build': {
-      const { frames } = buildSeries(msg.seriesName, msg.items);
+      const { frames } = buildSeries(msg.seriesName, msg.seriesId, msg.items, __VERSION__);
       const count = frames.length;
       const label = count === 1 ? '1 frame' : `${count} frames`;
       figma.notify(`Frame Builder: built ${label} for "${msg.seriesName}"`);

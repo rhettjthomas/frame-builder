@@ -1,6 +1,6 @@
 {
   "name": "frame-builder",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "private": true,
   "description": "Figma plugin that builds and exports every deliverable frame for a sermon series.",
   "scripts": {
