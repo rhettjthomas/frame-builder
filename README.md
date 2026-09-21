@@ -10,7 +10,24 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-Pre-scaffold. No plugin code yet.
+Milestone 1 of 7. The build dialog opens, the checklist persists between runs,
+and the Build button hands the checked deliverables to the main thread. Frame
+creation, tagging and export are not wired up yet.
+
+## Running it
+
+```
+npm install
+npm run watch
+```
+
+Then in Figma: Plugins, Development, Import plugin from manifest, and pick
+`manifest.json`. The manifest has no `id` yet, which is fine for development.
+Figma assigns one when the plugin is created for publishing, and it has to be
+added to the manifest before submitting to the Community.
+
+Other scripts: `npm run build` for a one-off minified build, `npm run typecheck`,
+and `npm test`.
 
 ## How it tracks frames
 

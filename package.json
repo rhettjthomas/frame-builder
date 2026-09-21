@@ -1,0 +1,19 @@
+{
+  "name": "frame-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Figma plugin that builds and exports every deliverable frame for a sermon series.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.138.0",
+    "@types/node": "^24.13.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}

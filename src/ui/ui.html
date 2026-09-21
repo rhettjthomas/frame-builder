@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Frame Builder</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand">
+    <span class="brand-name">Frame Builder</span>
+    <span class="version" id="version"></span>
+  </div>
+  <button class="icon-btn" id="settings-btn" title="Settings" aria-label="Settings" aria-haspopup="menu" aria-expanded="false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm0 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5.4-2.6-.9-.3-.2-.6.4-.8a.6.6 0 0 0-.1-.7l-.8-.8a.6.6 0 0 0-.7-.1l-.8.4-.6-.2-.3-.9A.6.6 0 0 0 8.8 2H7.2a.6.6 0 0 0-.6.4l-.3.9-.6.2-.8-.4a.6.6 0 0 0-.7.1l-.8.8a.6.6 0 0 0-.1.7l.4.8-.2.6-.9.3a.6.6 0 0 0-.4.6v1.6c0 .3.2.5.4.6l.9.3.2.6-.4.8a.6.6 0 0 0 .1.7l.8.8c.2.2.5.2.7.1l.8-.4.6.2.3.9c.1.2.3.4.6.4h1.6c.3 0 .5-.2.6-.4l.3-.9.6-.2.8.4c.2.1.5.1.7-.1l.8-.8a.6.6 0 0 0 .1-.7l-.4-.8.2-.6.9-.3c.2-.1.4-.3.4-.6V7.5a.6.6 0 0 0-.4-.6Zm-.6 1.7-1.1.4-.5 1.2.5 1-.5.5-1-.5-1.2.5-.4 1.1h-.8l-.4-1.1-1.2-.5-1 .5-.5-.5.5-1-.5-1.2-1.1-.4v-.8l1.1-.4.5-1.2-.5-1 .5-.5 1 .5 1.2-.5.4-1.1h.8l.4 1.1 1.2.5 1-.5.5.5-.5 1 .5 1.2 1.1.4v.8Z"/></svg>
+  </button>
+  <div class="menu" id="settings-menu" role="menu" hidden>
+    <button role="menuitem" data-action="reset">Reset checklist to preset</button>
+    <div class="menu-sep" role="separator"></div>
+    <div class="menu-note" id="menu-about"></div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" role="tab" id="tab-build" aria-selected="true" aria-controls="panel-build">Build</button>
+  <button class="tab" role="tab" id="tab-export" aria-selected="false" aria-controls="panel-export">Export</button>
+</nav>
+
+<main class="content">
+  <section id="panel-build" role="tabpanel" aria-labelledby="tab-build" class="panel">
+    <div class="field">
+      <label class="field-label" for="preset">Preset</label>
+      <div class="select">
+        <select id="preset"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="series-name">Series name</label>
+      <input id="series-name" type="text" placeholder="Hope Has a Name" autocomplete="off" spellcheck="false" />
+      <p class="field-help muted" id="series-id">Names the section and tags every frame.</p>
+    </div>
+
+    <div id="checklist"></div>
+  </section>
+
+  <section id="panel-export" role="tabpanel" aria-labelledby="tab-export" class="panel" hidden>
+    <div class="empty">
+      <strong>Nothing to export yet</strong>
+      <span class="muted">Finding and exporting tagged frames arrives in a later milestone.</span>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <section class="notices" id="notices" role="status" aria-live="polite" hidden></section>
+  <div class="status" id="status" hidden>
+    <div class="status-label"><span id="status-label"></span></div>
+  </div>
+  <button class="primary" id="build-btn" disabled>Build frames</button>
+</footer>
+
+<script>/*__JS__*/</script>
+</body>
+</html>
