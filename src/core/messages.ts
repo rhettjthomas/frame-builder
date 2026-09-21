@@ -1,3 +1,4 @@
+import type { CustomDeliverable } from './deliverables';
 import type { BuildState } from './state';
 
 /** One deliverable the user asked to build. The main thread resolves sizes from the library. */
@@ -16,6 +17,8 @@ export type UIToMain =
       seriesId: string;
       items: BuildItem[];
       folderPrefix: boolean;
+      /** Custom sizes in play, so the main thread can resolve them. */
+      customs: CustomDeliverable[];
     };
 
 /** Main thread → UI iframe. */

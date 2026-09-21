@@ -8,6 +8,7 @@
  */
 import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY, type BuildState } from './core/state';
+import { buildLibrary } from './core/deliverables';
 import { buildSeries } from './main/builder';
 
 declare const __VERSION__: string;
@@ -65,6 +66,8 @@ async function handle(msg: UIToMain) {
         msg.items,
         __VERSION__,
         msg.folderPrefix,
+        // The UI holds the custom sizes, so it sends them with the build.
+        buildLibrary(msg.customs),
       );
       const label = frames.length === 1 ? '1 frame' : `${frames.length} frames`;
       figma.notify(`Frame Builder: built ${label} for "${msg.seriesName}"`);

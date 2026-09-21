@@ -103,3 +103,138 @@ describe('settings', () => {
     expect(normalizeState({ presetId: 'custom' }).settings.folderPrefix).toBe(false);
   });
 });
+
+describe('custom sizes in state', () => {
+  const custom = {
+    id: 'custom:abc',
+    name: 'Bulletin Insert',
+    section: 'social-web',
+    width: 1275,
+    height: 1650,
+    safe: { sides: 75, ends: 75 },
+    quantity: 2,
+  };
+
+  it('gives a stored custom size a row of its own', () => {
+    const state = normalizeState({ customs: [custom] });
+    expect(state.customs).toHaveLength(1);
+    expect(state.rows['custom:abc']).toBeDefined();
+  });
+
+  it('restores whether that row was checked', () => {
+    const state = normalizeState({
+      customs: [custom],
+      rows: { 'custom:abc': { checked: true, quantity: 2 } },
+    });
+    expect(state.rows['custom:abc']).toEqual({ checked: true, quantity: 2 });
+  });
+
+  it('counts a checked custom size in the total', () => {
+    const state = normalizeState({ customs: [custom] });
+    // Clear the shipped rows so the count is only about the custom size.
+    for (const id of Object.keys(state.rows)) state.rows[id].checked = false;
+    state.rows['custom:abc'] = { checked: true, quantity: 2 };
+    expect(frameCount(state)).toBe(2);
+  });
+
+  it('adds a custom size on top of the shipped checklist it was saved with', () => {
+    const withCustom = normalizeState({ customs: [custom] });
+    withCustom.rows['custom:abc'] = { checked: true, quantity: 2 };
+    // Sermon Series is the default, so this is the shipped 20 plus the custom 2.
+    expect(frameCount(withCustom)).toBe(22);
+  });
+
+  it('drops a size with no usable dimensions rather than building a bad frame', () => {
+    const state = normalizeState({
+      customs: [
+        { ...custom, width: 0 },
+        { ...custom, id: 'custom:b', height: -5 },
+        { ...custom, id: 'custom:c', name: '  ' },
+      ],
+    });
+    expect(state.customs).toEqual([]);
+  });
+
+  it('rejects an id that is not a custom id, so nothing can shadow a shipped one', () => {
+    expect(normalizeState({ customs: [{ ...custom, id: 'story' }] }).customs).toEqual([]);
+  });
+
+  it('keeps only the first of two sizes sharing an id', () => {
+    const state = normalizeState({ customs: [custom, { ...custom, name: 'Second' }] });
+    expect(state.customs.map((c) => c.name)).toEqual(['Bulletin Insert']);
+  });
+
+  it('clamps a quantity that arrived out of range', () => {
+    expect(normalizeState({ customs: [{ ...custom, quantity: 99 }] }).customs[0].quantity).toBe(10);
+    expect(normalizeState({ customs: [{ ...custom, quantity: 0 }] }).customs[0].quantity).toBe(1);
+  });
+
+  it('survives junk in place of the customs list', () => {
+    expect(normalizeState({ customs: 'nope' }).customs).toEqual([]);
+    expect(normalizeState({ customs: [null, 7, 'x'] }).customs).toEqual([]);
+  });
+});
+
+describe('saved presets in state', () => {
+  const saved = { id: 'saved:1', name: 'Christmas Eve', include: ['story', 'square'] };
+
+  it('reads a saved preset back', () => {
+    const state = normalizeState({ savedPresets: [saved] });
+    expect(state.savedPresets.map((p) => p.name)).toEqual(['Christmas Eve']);
+  });
+
+  it("marks it as the user's, so it can be told from a shipped one", () => {
+    expect(normalizeState({ savedPresets: [saved] }).savedPresets[0].saved).toBe(true);
+  });
+
+  it('lets a saved preset be selected', () => {
+    const state = normalizeState({ presetId: 'saved:1', savedPresets: [saved] });
+    expect(state.presetId).toBe('saved:1');
+  });
+
+  it('refuses a saved preset that would shadow a shipped id', () => {
+    const state = normalizeState({ savedPresets: [{ ...saved, id: 'sermon-series' }] });
+    expect(state.savedPresets).toEqual([]);
+  });
+
+  it('carries the custom sizes a preset needs, so it travels complete', () => {
+    const preset = {
+      ...saved,
+      include: ['custom:abc'],
+      customs: [
+        {
+          id: 'custom:abc',
+          name: 'Bulletin Insert',
+          section: 'social-web',
+          width: 1275,
+          height: 1650,
+          safe: { sides: 75, ends: 75 },
+          quantity: 1,
+        },
+      ],
+    };
+    const state = stateFromPreset('saved:1', normalizeState({ savedPresets: [preset] }).savedPresets);
+    expect(state.customs.map((c) => c.name)).toEqual(['Bulletin Insert']);
+    expect(state.rows['custom:abc'].checked).toBe(true);
+  });
+
+  it('keeps a size already in play when switching preset', () => {
+    const inPlay = {
+      id: 'custom:keep',
+      name: 'Keep Me',
+      section: 'screens' as const,
+      width: 100,
+      height: 100,
+      safe: { sides: 0, ends: 0 },
+      quantity: 1,
+    };
+    const state = stateFromPreset('event-launch', [], [inPlay]);
+    expect(state.customs.map((c) => c.id)).toEqual(['custom:keep']);
+    expect(state.rows['custom:keep']).toBeDefined();
+  });
+
+  it('survives junk in place of the preset list', () => {
+    expect(normalizeState({ savedPresets: 'nope' }).savedPresets).toEqual([]);
+    expect(normalizeState({ savedPresets: [{ id: '', name: '' }] }).savedPresets).toEqual([]);
+  });
+});

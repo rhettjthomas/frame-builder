@@ -5,18 +5,27 @@
  */
 import {
   clampQuantity,
-  DELIVERABLES,
+  CUSTOM_PREFIX,
   deliverablesIn,
   formatSafe,
   formatSize,
-  SECTION_LABELS,
+  isCustomId,
+  type CustomDeliverable,
   type Deliverable,
+  type Library,
   type Section,
+  SECTION_LABELS,
 } from '../core/deliverables';
 import type { BuildItem, MainToUI, UIToMain } from '../core/messages';
-import { SHIPPED_PRESETS } from '../core/presets';
+import { allPresets, type Preset } from '../core/presets';
 import { toSeriesId } from '../core/slug';
-import { frameCount, stateFromPreset, type BuildState } from '../core/state';
+import {
+  frameCount,
+  libraryFor,
+  normalizePresets,
+  stateFromPreset,
+  type BuildState,
+} from '../core/state';
 
 declare const __VERSION__: string;
 
@@ -42,6 +51,29 @@ const dom = {
   status: el('status'),
   statusLabel: el('status-label'),
   buildBtn: el<HTMLButtonElement>('build-btn'),
+  addCustom: el<HTMLButtonElement>('add-custom'),
+  customSheet: el('custom-sheet'),
+  customClose: el<HTMLButtonElement>('custom-close'),
+  customName: el<HTMLInputElement>('custom-name'),
+  customWidth: el<HTMLInputElement>('custom-width'),
+  customHeight: el<HTMLInputElement>('custom-height'),
+  customSides: el<HTMLInputElement>('custom-sides'),
+  customEnds: el<HTMLInputElement>('custom-ends'),
+  customSection: el<HTMLSelectElement>('custom-section'),
+  customQuantity: el<HTMLInputElement>('custom-quantity'),
+  customStatus: el('custom-status'),
+  customSave: el<HTMLButtonElement>('custom-save'),
+  presetsSheet: el('presets-sheet'),
+  presetsClose: el<HTMLButtonElement>('presets-close'),
+  presetsText: el<HTMLTextAreaElement>('presets-text'),
+  presetsStatus: el('presets-status'),
+  presetsCopy: el<HTMLButtonElement>('presets-copy'),
+  presetsDownload: el<HTMLButtonElement>('presets-download'),
+  presetsFileBtn: el<HTMLButtonElement>('presets-file-btn'),
+  presetsFile: el<HTMLInputElement>('presets-file'),
+  presetsLoad: el<HTMLButtonElement>('presets-load'),
+  presetName: el<HTMLInputElement>('preset-name'),
+  presetSave: el<HTMLButtonElement>('preset-save'),
 };
 
 let state: BuildState = stateFromPreset('sermon-series');
@@ -59,9 +91,13 @@ function save() {
 
 /* ---------------------------------------------------------------- rendering */
 
+function library(): Library {
+  return libraryFor(state);
+}
+
 function renderPresets() {
   dom.preset.innerHTML = '';
-  for (const preset of SHIPPED_PRESETS) {
+  for (const preset of allPresets(state.savedPresets)) {
     const option = document.createElement('option');
     option.value = preset.id;
     option.textContent = preset.name;
@@ -71,11 +107,11 @@ function renderPresets() {
 }
 
 function checkedCount(section: Section): number {
-  return deliverablesIn(section).filter((d) => state.rows[d.id].checked).length;
+  return deliverablesIn(library(), section).filter((d) => state.rows[d.id]?.checked).length;
 }
 
 function renderGroupHead(section: Section, container: HTMLElement) {
-  const all = deliverablesIn(section);
+  const all = deliverablesIn(library(), section);
   const checked = checkedCount(section);
 
   const head = document.createElement('div');
@@ -114,6 +150,7 @@ function renderGroupHead(section: Section, container: HTMLElement) {
 
 function renderRow(d: Deliverable, container: HTMLElement) {
   const row = state.rows[d.id];
+  if (!row) return;
 
   const wrap = document.createElement('div');
   wrap.className = row.checked ? 'row on' : 'row';
@@ -180,6 +217,23 @@ function renderRow(d: Deliverable, container: HTMLElement) {
     wrap.appendChild(qty);
   }
 
+  if (isCustomId(d.id)) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'row-remove';
+    remove.textContent = '\u00d7';
+    remove.title = `Remove ${d.name}`;
+    remove.setAttribute('aria-label', `Remove ${d.name}`);
+    remove.addEventListener('click', () => {
+      state.customs = state.customs.filter((c) => c.id !== d.id);
+      delete state.rows[d.id];
+      state.presetId = 'custom';
+      save();
+      render();
+    });
+    wrap.appendChild(remove);
+  }
+
   container.appendChild(wrap);
 }
 
@@ -191,7 +245,7 @@ function renderChecklist() {
     renderGroupHead(section, group);
     const rows = document.createElement('div');
     rows.className = 'rows';
-    for (const d of deliverablesIn(section)) renderRow(d, rows);
+    for (const d of deliverablesIn(library(), section)) renderRow(d, rows);
     group.appendChild(rows);
     dom.checklist.appendChild(group);
   }
@@ -242,6 +296,159 @@ function showError(message: string) {
   dom.notices.hidden = !message;
 }
 
+/* ------------------------------------------------------------ custom sizes */
+
+function openCustomSheet() {
+  dom.customName.value = '';
+  dom.customWidth.value = '';
+  dom.customHeight.value = '';
+  dom.customSides.value = '';
+  dom.customEnds.value = '';
+  dom.customSection.value = 'social-web';
+  dom.customQuantity.value = '1';
+  dom.customStatus.textContent = '';
+  dom.customSheet.hidden = false;
+  dom.customName.focus();
+}
+
+function numberFrom(input: HTMLInputElement, fallback = 0): number {
+  const value = Number(input.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function addCustomSize(): void {
+  const name = dom.customName.value.trim();
+  const width = Math.round(numberFrom(dom.customWidth));
+  const height = Math.round(numberFrom(dom.customHeight));
+
+  if (!name) return fail('Give the size a name.');
+  if (width < 1 || height < 1) return fail('Width and height must be at least 1 pixel.');
+  if (library().some((d) => d.name.toLowerCase() === name.toLowerCase())) {
+    return fail(`There is already a deliverable called ${name}.`);
+  }
+
+  const custom: CustomDeliverable = {
+    // Time plus a random tail: unique enough across machines that two people
+    // saving a preset on the same day can't collide.
+    id: `${CUSTOM_PREFIX}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    section: dom.customSection.value === 'screens' ? 'screens' : 'social-web',
+    width,
+    height,
+    safe: {
+      sides: Math.max(0, Math.round(numberFrom(dom.customSides))),
+      ends: Math.max(0, Math.round(numberFrom(dom.customEnds))),
+    },
+    quantity: Math.min(10, Math.max(1, Math.round(numberFrom(dom.customQuantity, 1)))),
+  };
+
+  state.customs = [...state.customs, custom];
+  state.rows[custom.id] = { checked: true, quantity: custom.quantity };
+  state.presetId = 'custom';
+  save();
+  render();
+  dom.customSheet.hidden = true;
+
+  function fail(message: string) {
+    dom.customStatus.textContent = message;
+  }
+}
+
+/* ---------------------------------------------------------------- presets */
+
+/**
+ * The checklist as it stands, saved under the name in the sheet. The name field
+ * lives in the sheet rather than a prompt() because Figma's plugin iframe is
+ * sandboxed without allow-modals, so a prompt would simply never appear.
+ */
+function savePresetFromChecklist() {
+  const name = dom.presetName.value.trim();
+  if (!name) {
+    dom.presetsStatus.textContent = 'Give the preset a name.';
+    dom.presetName.focus();
+    return;
+  }
+
+  const include = library()
+    .filter((d) => state.rows[d.id]?.checked)
+    .map((d) => d.id);
+  const quantities: Record<string, number> = {};
+  for (const id of include) {
+    const row = state.rows[id];
+    if (row) quantities[id] = row.quantity;
+  }
+  // Only the customs this preset actually uses travel with it.
+  const customs = state.customs.filter((c) => include.indexOf(c.id) !== -1);
+
+  const existing = state.savedPresets.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  const preset: Preset = {
+    id: existing?.id ?? `saved:${Date.now().toString(36)}`,
+    name,
+    include,
+    quantities,
+    customs,
+    saved: true,
+  };
+
+  state.savedPresets = existing
+    ? state.savedPresets.map((p) => (p.id === existing.id ? preset : p))
+    : [...state.savedPresets, preset];
+  state.presetId = preset.id;
+  save();
+  renderPresets();
+  render();
+  dom.presetName.value = '';
+  dom.presetsText.value = JSON.stringify(state.savedPresets, null, 2);
+  dom.presetsStatus.textContent = existing ? `Updated "${name}".` : `Saved "${name}".`;
+}
+
+function openPresetsSheet() {
+  dom.presetName.value = '';
+  dom.presetsText.value = JSON.stringify(state.savedPresets, null, 2);
+  dom.presetsStatus.textContent = state.savedPresets.length
+    ? ''
+    : 'No saved presets yet. Paste some here to load them.';
+  dom.presetsSheet.hidden = false;
+}
+
+function loadPresetsFromText() {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(dom.presetsText.value);
+  } catch {
+    dom.presetsStatus.textContent = 'That is not valid JSON.';
+    return;
+  }
+  const incoming = normalizePresets(parsed);
+  if (incoming.length === 0) {
+    dom.presetsStatus.textContent = 'No usable presets in there.';
+    return;
+  }
+  // Loading adds to what is already saved, replacing by name rather than
+  // stacking a second copy of a preset the user already has.
+  const byName = new Map(state.savedPresets.map((p) => [p.name.toLowerCase(), p]));
+  for (const preset of incoming) byName.set(preset.name.toLowerCase(), preset);
+  state.savedPresets = [...byName.values()];
+  save();
+  renderPresets();
+  render();
+  dom.presetsSheet.hidden = true;
+  const noun = incoming.length === 1 ? 'preset' : 'presets';
+  showStatus(`Loaded ${incoming.length} ${noun}.`);
+}
+
+function downloadPresets() {
+  const blob = new Blob([JSON.stringify(state.savedPresets, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'frame-builder-presets.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 /* -------------------------------------------------------------------- wiring */
 
 function closeMenu() {
@@ -251,9 +458,9 @@ function closeMenu() {
 
 function buildItems(): BuildItem[] {
   const items: BuildItem[] = [];
-  for (const d of DELIVERABLES) {
+  for (const d of library()) {
     const row = state.rows[d.id];
-    if (row.checked) items.push({ deliverableId: d.id, quantity: clampQuantity(d, row.quantity) });
+    if (row?.checked) items.push({ deliverableId: d.id, quantity: clampQuantity(d, row.quantity) });
   }
   return items;
 }
@@ -281,17 +488,22 @@ dom.settingsMenu.addEventListener('click', (e) => {
   }
   if (action === 'reset') {
     const settings = state.settings;
-    state = stateFromPreset(state.presetId === 'custom' ? 'sermon-series' : state.presetId);
+    state = stateFromPreset(
+      state.presetId === 'custom' ? 'sermon-series' : state.presetId,
+      state.savedPresets,
+      state.customs,
+    );
     state.settings = settings;
     save();
     render();
   }
+  if (action === 'share-presets') openPresetsSheet();
   closeMenu();
 });
 
 dom.preset.addEventListener('change', () => {
   const settings = state.settings;
-  state = stateFromPreset(dom.preset.value);
+  state = stateFromPreset(dom.preset.value, state.savedPresets, state.customs);
   state.settings = settings;
   save();
   render();
@@ -313,7 +525,40 @@ dom.buildBtn.addEventListener('click', () => {
     seriesId,
     items: buildItems(),
     folderPrefix: state.settings.folderPrefix,
+    customs: state.customs,
   });
+});
+
+dom.addCustom.addEventListener('click', openCustomSheet);
+dom.customClose.addEventListener('click', () => {
+  dom.customSheet.hidden = true;
+});
+dom.customSave.addEventListener('click', addCustomSize);
+dom.customSheet.addEventListener('keydown', (e) => {
+  if ((e as KeyboardEvent).key === 'Enter') addCustomSize();
+  if ((e as KeyboardEvent).key === 'Escape') dom.customSheet.hidden = true;
+});
+
+dom.presetsClose.addEventListener('click', () => {
+  dom.presetsSheet.hidden = true;
+});
+dom.presetSave.addEventListener('click', savePresetFromChecklist);
+dom.presetName.addEventListener('keydown', (e) => {
+  if ((e as KeyboardEvent).key === 'Enter') savePresetFromChecklist();
+});
+dom.presetsLoad.addEventListener('click', loadPresetsFromText);
+dom.presetsDownload.addEventListener('click', downloadPresets);
+dom.presetsCopy.addEventListener('click', () => {
+  dom.presetsText.select();
+  dom.presetsStatus.textContent = document.execCommand('copy') ? 'Copied.' : 'Copy that by hand.';
+});
+dom.presetsFileBtn.addEventListener('click', () => dom.presetsFile.click());
+dom.presetsFile.addEventListener('change', async () => {
+  const file = dom.presetsFile.files?.[0];
+  if (!file) return;
+  dom.presetsText.value = await file.text();
+  dom.presetsFile.value = '';
+  loadPresetsFromText();
 });
 
 window.addEventListener('message', (event: MessageEvent) => {

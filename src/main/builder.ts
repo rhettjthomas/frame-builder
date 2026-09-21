@@ -2,7 +2,7 @@
  * Creates the frames. Everything about where they go is decided in core/layout,
  * so this module only turns a plan into Figma nodes.
  */
-import { findDeliverable, type SafeMargin } from '../core/deliverables';
+import { buildLibrary, findIn, type Library, type SafeMargin } from '../core/deliverables';
 import { planFrames, type PlannedFrame } from '../core/layout';
 import type { BuildItem } from '../core/messages';
 import { stampTags } from '../core/tags';
@@ -71,7 +71,12 @@ function placementForSection(section: SectionNode): { x: number; y: number } {
   return { x: Math.round(right + 400), y: Math.round(top) };
 }
 
-function createFrame(planned: PlannedFrame, seriesId: string, version: string): FrameNode {
+function createFrame(
+  planned: PlannedFrame,
+  seriesId: string,
+  version: string,
+  library: Library,
+): FrameNode {
   const frame = figma.createFrame();
   frame.name = planned.name;
   frame.resize(planned.width, planned.height);
@@ -84,7 +89,7 @@ function createFrame(planned: PlannedFrame, seriesId: string, version: string): 
   // already carries the right format at full size.
   frame.exportSettings = [
     {
-      format: findDeliverable(planned.deliverableId)?.format ?? 'JPG',
+      format: findIn(library, planned.deliverableId)?.format ?? 'JPG',
       constraint: { type: 'SCALE', value: 1 },
     },
   ];
@@ -103,8 +108,9 @@ export function buildSeries(
   items: readonly BuildItem[],
   version: string,
   folderPrefix = false,
+  library: Library = buildLibrary(),
 ): BuildResult {
-  const plan = planFrames(seriesName, items, folderPrefix);
+  const plan = planFrames(seriesName, items, folderPrefix, library);
   if (plan.frames.length === 0) throw new Error('Nothing was checked, so there is nothing to build.');
 
   const section = figma.createSection();
@@ -119,7 +125,7 @@ export function buildSeries(
 
   const frames: FrameNode[] = [];
   for (const planned of plan.frames) {
-    const frame = createFrame(planned, seriesId, version);
+    const frame = createFrame(planned, seriesId, version, library);
     // Append first: x and y are relative to the containing parent, so they only
     // mean what the plan intends once the frame is inside the section.
     section.appendChild(frame);

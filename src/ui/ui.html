@@ -20,6 +20,7 @@
     </button>
     <div class="menu-note">Adds SCREENS/ or SOCIAL MEDIA/ to each name, so Figma's own export makes the folders.</div>
     <div class="menu-sep" role="separator"></div>
+    <button role="menuitem" data-action="share-presets">Presets (save, share, load)…</button>
     <button role="menuitem" data-action="reset">Reset checklist to preset</button>
     <div class="menu-sep" role="separator"></div>
     <div class="menu-note" id="menu-about"></div>
@@ -43,6 +44,10 @@
     </div>
 
     <div id="checklist"></div>
+
+    <button type="button" class="add-custom" id="add-custom">
+      <span class="add-custom-plus">+</span>Add custom size
+    </button>
   </section>
 
 </main>
@@ -54,6 +59,87 @@
   </div>
   <button class="primary" id="build-btn" disabled>Build frames</button>
 </footer>
+
+<div class="sheet" id="custom-sheet" role="dialog" aria-modal="true" aria-labelledby="custom-title" hidden>
+  <div class="sheet-head">
+    <strong id="custom-title">Custom size</strong>
+    <button type="button" class="icon-btn" id="custom-close" aria-label="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label class="field-label" for="custom-name">Name</label>
+      <input id="custom-name" type="text" placeholder="Bulletin Insert" autocomplete="off" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="custom-width">Width</label>
+        <input id="custom-width" type="number" min="1" step="1" placeholder="1080" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="custom-height">Height</label>
+        <input id="custom-height" type="number" min="1" step="1" placeholder="1350" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="custom-sides">Safe sides</label>
+        <input id="custom-sides" type="number" min="0" step="1" placeholder="100" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="custom-ends">Safe top/bottom</label>
+        <input id="custom-ends" type="number" min="0" step="1" placeholder="100" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="custom-section">Group</label>
+        <div class="select">
+          <select id="custom-section">
+            <option value="screens">Screens</option>
+            <option value="social-web">Social &amp; Web</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="custom-quantity">Quantity</label>
+        <input id="custom-quantity" type="number" min="1" max="10" step="1" value="1" />
+      </div>
+    </div>
+    <p class="sheet-status" id="custom-status" role="status" aria-live="polite"></p>
+  </div>
+  <button type="button" class="primary" id="custom-save">Add size</button>
+</div>
+
+<div class="sheet" id="presets-sheet" role="dialog" aria-modal="true" aria-labelledby="presets-title" hidden>
+  <div class="sheet-head">
+    <strong id="presets-title">Presets</strong>
+    <button type="button" class="icon-btn" id="presets-close" aria-label="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="field">
+    <label class="field-label" for="preset-name">Save the current checklist as</label>
+    <div class="field-row">
+      <input id="preset-name" type="text" placeholder="Christmas Eve" autocomplete="off" />
+      <button type="button" class="secondary" id="preset-save">Save</button>
+    </div>
+  </div>
+  <p class="sheet-help muted">
+    Your saved presets, custom sizes included. Copy this to another machine, or hand it to a
+    church's team so their work comes back to the same spec. Loading adds to what you have.
+  </p>
+  <textarea id="presets-text" spellcheck="false" aria-label="Presets JSON"></textarea>
+  <p class="sheet-status" id="presets-status" role="status" aria-live="polite"></p>
+  <div class="sheet-actions">
+    <button type="button" class="secondary" id="presets-copy">Copy</button>
+    <button type="button" class="secondary" id="presets-download">Download</button>
+    <button type="button" class="secondary" id="presets-file-btn">Load file…</button>
+    <input type="file" id="presets-file" accept=".json,application/json,text/plain" hidden />
+  </div>
+  <button type="button" class="primary" id="presets-load">Load presets</button>
+</div>
 
 <script>/*__JS__*/</script>
 </body>

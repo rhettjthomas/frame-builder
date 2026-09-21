@@ -4,11 +4,12 @@
  * section's top-left corner.
  */
 import {
+  buildLibrary,
   clampQuantity,
-  DELIVERABLES,
-  findDeliverable,
+  findIn,
   type Deliverable,
   type Group,
+  type Library,
   type SafeMargin,
   type Section,
 } from './deliverables';
@@ -71,14 +72,14 @@ export function frameName(
 }
 
 /** The checked deliverables in library order, each with how many frames it wants. */
-function resolve(items: readonly BuildItem[]): { d: Deliverable; count: number }[] {
+function resolve(items: readonly BuildItem[], library: Library): { d: Deliverable; count: number }[] {
   const wanted = new Map<string, number>();
   for (const item of items) {
-    const d = findDeliverable(item.deliverableId);
+    const d = findIn(library, item.deliverableId);
     if (d) wanted.set(d.id, clampQuantity(d, item.quantity));
   }
   const out: { d: Deliverable; count: number }[] = [];
-  for (const d of DELIVERABLES) {
+  for (const d of library) {
     const count = wanted.get(d.id);
     if (count) out.push({ d, count });
   }
@@ -89,8 +90,9 @@ export function planFrames(
   seriesName: string,
   items: readonly BuildItem[],
   folderPrefix = false,
+  library: Library = buildLibrary(),
 ): Plan {
-  const resolved = resolve(items);
+  const resolved = resolve(items, library);
   const frames: PlannedFrame[] = [];
 
   // Cursor and extents are relative to the content origin; PADDING is added last.

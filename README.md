@@ -10,8 +10,8 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-v0.6.0. Builds the frames and sets them up for Figma's own export. Presets and
-Community polish are still to come.
+v0.7.0. Builds the frames, sets them up for Figma's own export, and handles
+custom sizes and saved presets. Community polish is still to come.
 
 Frame Builder does not export. A Figma plugin cannot write to a folder the user
 chooses, and Figma's own export can, so the plugin's job is to make that export
@@ -36,6 +36,11 @@ write without it. Replace it with the real ID before publishing: in Figma, creat
 the plugin through Plugins, Development, New plugin, and copy the `id` out of the
 manifest it generates. Swapping the ID starts the saved checklist from the
 defaults once, which is harmless.
+
+Presets save per machine and export as JSON, so a preset can move between
+machines or be handed to a church's team. A preset carries the custom sizes it
+uses inline, so it arrives complete rather than referring to sizes the other
+person doesn't have.
 
 Other scripts: `npm run build` for a one-off minified build, `npm run typecheck`,
 and `npm test`.

@@ -221,14 +221,68 @@ export const SECTION_LABELS: Record<Section, string> = {
   'social-web': 'Social & Web',
 };
 
-const BY_ID = new Map(DELIVERABLES.map((d) => [d.id, d]));
-
-export function findDeliverable(id: string): Deliverable | undefined {
-  return BY_ID.get(id);
+/**
+ * A size the user added themselves. Kept separate from the shipped library and
+ * carried by the preset that uses it, so a preset handed to a church's team
+ * arrives complete rather than referring to sizes they don't have.
+ */
+export interface CustomDeliverable {
+  id: string;
+  name: string;
+  section: Section;
+  width: number;
+  height: number;
+  safe: SafeMargin;
+  quantity: number;
 }
 
-export function deliverablesIn(section: Section): Deliverable[] {
-  return DELIVERABLES.filter((d) => d.section === section);
+export const CUSTOM_PREFIX = 'custom:';
+
+export function isCustomId(id: string): boolean {
+  return id.indexOf(CUSTOM_PREFIX) === 0;
+}
+
+/** Custom sizes get no special treatment once they're in the library. */
+export function customToDeliverable(c: CustomDeliverable): Deliverable {
+  return {
+    id: c.id,
+    name: c.name,
+    section: c.section,
+    // Screens deliver to SCREENS; everything else to SOCIAL MEDIA, which is
+    // where an unclassified social-or-web asset is least surprising.
+    group: c.section === 'screens' ? 'screens' : 'social',
+    width: c.width,
+    height: c.height,
+    safe: c.safe,
+    fill: true,
+    format: 'JPG',
+    quantity: c.quantity > 1 ? { default: c.quantity, min: 1, max: Math.max(c.quantity, 10) } : null,
+    note: 'Custom size',
+  };
+}
+
+/**
+ * The deliverables actually on offer: the shipped library plus whatever custom
+ * sizes are in play. Everything downstream works from this rather than from the
+ * shipped constant, so a custom size behaves like any other row.
+ */
+export type Library = readonly Deliverable[];
+
+export function buildLibrary(customs: readonly CustomDeliverable[] = []): Library {
+  return [...DELIVERABLES, ...customs.map(customToDeliverable)];
+}
+
+export function findIn(library: Library, id: string): Deliverable | undefined {
+  return library.find((d) => d.id === id);
+}
+
+export function deliverablesIn(library: Library, section: Section): Deliverable[] {
+  return library.filter((d) => d.section === section);
+}
+
+/** Lookup restricted to the shipped library, for rules that can't involve customs. */
+export function findDeliverable(id: string): Deliverable | undefined {
+  return DELIVERABLES.find((d) => d.id === id);
 }
 
 /** How many frames a deliverable produces at a given quantity, clamped to its range. */

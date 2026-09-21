@@ -1,12 +1,20 @@
-import { DELIVERABLES, type Deliverable } from './deliverables';
+import { DELIVERABLES, type CustomDeliverable, type Deliverable } from './deliverables';
 
 export interface Preset {
   id: string;
   name: string;
-  /** Deliverable ids to check. 'all' checks every shipped deliverable. */
+  /** Deliverable ids to check. 'all' checks every deliverable in the library. */
   include: 'all' | readonly string[];
   /** Quantity overrides. Anything omitted uses the deliverable's own default. */
   quantities?: Readonly<Record<string, number>>;
+  /**
+   * Custom sizes this preset brings with it. Carried inline rather than referred
+   * to by id, so a preset handed to a church's team arrives complete and their
+   * work comes back to the same spec.
+   */
+  customs?: readonly CustomDeliverable[];
+  /** True for presets the user saved, which can be renamed and deleted. */
+  saved?: boolean;
 }
 
 export const SHIPPED_PRESETS: readonly Preset[] = [
@@ -32,8 +40,13 @@ export const SHIPPED_PRESETS: readonly Preset[] = [
 
 export const DEFAULT_PRESET_ID = 'sermon-series';
 
-export function findPreset(id: string): Preset | undefined {
-  return SHIPPED_PRESETS.find((p) => p.id === id);
+export function findPreset(id: string, saved: readonly Preset[] = []): Preset | undefined {
+  return SHIPPED_PRESETS.find((p) => p.id === id) ?? saved.find((p) => p.id === id);
+}
+
+/** Shipped presets first, then the user's own. */
+export function allPresets(saved: readonly Preset[] = []): Preset[] {
+  return [...SHIPPED_PRESETS, ...saved];
 }
 
 /** Whether a preset checks a given deliverable. */

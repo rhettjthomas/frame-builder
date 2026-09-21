@@ -4,8 +4,15 @@
  * may have written a deliverable that no longer exists, or a quantity now out of
  * range.
  */
-import { clampQuantity, DELIVERABLES, findDeliverable } from './deliverables';
-import { DEFAULT_PRESET_ID, findPreset, presetIncludes, presetQuantity } from './presets';
+import {
+  buildLibrary,
+  clampQuantity,
+  findIn,
+  isCustomId,
+  type CustomDeliverable,
+  type Library,
+} from './deliverables';
+import { DEFAULT_PRESET_ID, findPreset, presetIncludes, presetQuantity, type Preset } from './presets';
 
 export const STATE_KEY = 'frame-builder/state';
 
@@ -30,22 +37,49 @@ export const DEFAULT_SETTINGS: BuildSettings = {
 
 export interface BuildState {
   presetId: string;
-  /** Keyed by deliverable id. Every shipped deliverable always has a row. */
+  /** Keyed by deliverable id. Every deliverable in the library has a row. */
   rows: Record<string, Row>;
+  /** Custom sizes currently in play, shown alongside the shipped library. */
+  customs: CustomDeliverable[];
+  /** Presets the user saved, on top of the three that ship. */
+  savedPresets: Preset[];
   settings: BuildSettings;
 }
 
-/** The checklist a preset describes, with quantities clamped to each range. */
-export function stateFromPreset(presetId: string): BuildState {
-  const preset = findPreset(presetId) ?? findPreset(DEFAULT_PRESET_ID)!;
+/** The deliverables a state is working with: shipped plus its own customs. */
+export function libraryFor(state: BuildState): Library {
+  return buildLibrary(state.customs);
+}
+
+/**
+ * The checklist a preset describes, with quantities clamped to each range. A
+ * preset brings its own custom sizes, so choosing one installs them too.
+ */
+export function stateFromPreset(
+  presetId: string,
+  saved: readonly Preset[] = [],
+  keepCustoms: readonly CustomDeliverable[] = [],
+): BuildState {
+  const preset = findPreset(presetId, saved) ?? findPreset(DEFAULT_PRESET_ID)!;
+  // A preset's own customs win; anything else in play is kept so switching
+  // presets doesn't quietly discard a size the user just added.
+  const customs = [...(preset.customs ?? [])];
+  for (const c of keepCustoms) if (!customs.some((existing) => existing.id === c.id)) customs.push(c);
+
   const rows: Record<string, Row> = {};
-  for (const d of DELIVERABLES) {
+  for (const d of buildLibrary(customs)) {
     rows[d.id] = {
       checked: presetIncludes(preset, d),
       quantity: clampQuantity(d, presetQuantity(preset, d)),
     };
   }
-  return { presetId: preset.id, rows, settings: { ...DEFAULT_SETTINGS } };
+  return {
+    presetId: preset.id,
+    rows,
+    customs,
+    savedPresets: [...saved],
+    settings: { ...DEFAULT_SETTINGS },
+  };
 }
 
 export const DEFAULT_STATE = stateFromPreset(DEFAULT_PRESET_ID);
@@ -59,7 +93,20 @@ export function normalizeState(stored: unknown): BuildState {
   if (!stored || typeof stored !== 'object') return base;
   const raw = stored as Record<string, unknown>;
 
-  if (typeof raw.presetId === 'string' && findPreset(raw.presetId)) {
+  const savedPresets = normalizePresets(raw.savedPresets);
+  base.savedPresets = savedPresets;
+
+  const customs = normalizeCustoms(raw.customs);
+  if (customs.length > 0) {
+    base.customs = customs;
+    // Rows are keyed by deliverable id, so the library has to include the stored
+    // customs before any row can be read back onto it.
+    for (const d of buildLibrary(customs)) {
+      if (!base.rows[d.id]) base.rows[d.id] = { checked: false, quantity: clampQuantity(d, 1) };
+    }
+  }
+
+  if (typeof raw.presetId === 'string' && findPreset(raw.presetId, savedPresets)) {
     base.presetId = raw.presetId;
   }
 
@@ -71,10 +118,11 @@ export function normalizeState(stored: unknown): BuildState {
     }
   }
 
+  const library = buildLibrary(base.customs);
   const rows = raw.rows;
   if (rows && typeof rows === 'object') {
     for (const [id, value] of Object.entries(rows as Record<string, unknown>)) {
-      const d = findDeliverable(id);
+      const d = findIn(library, id);
       if (!d || !value || typeof value !== 'object') continue;
       const row = value as Record<string, unknown>;
       if (typeof row.checked === 'boolean') base.rows[id].checked = row.checked;
@@ -89,9 +137,85 @@ export function normalizeState(stored: unknown): BuildState {
 /** Total frames the current checklist would build. */
 export function frameCount(state: BuildState): number {
   let total = 0;
-  for (const d of DELIVERABLES) {
+  for (const d of libraryFor(state)) {
     const row = state.rows[d.id];
     if (row?.checked) total += clampQuantity(d, row.quantity);
   }
   return total;
+}
+
+/* ------------------------------------------------- reading untrusted storage */
+
+function num(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * Custom sizes come back from storage, or out of a shared JSON file, so every
+ * field is checked. A size with no usable dimensions is dropped rather than
+ * building a frame nobody asked for.
+ */
+export function normalizeCustoms(raw: unknown): CustomDeliverable[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CustomDeliverable[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const c = entry as Record<string, unknown>;
+    const id = typeof c.id === 'string' && isCustomId(c.id) ? c.id : '';
+    const name = typeof c.name === 'string' ? c.name.trim() : '';
+    const width = Math.round(num(c.width, 0));
+    const height = Math.round(num(c.height, 0));
+    if (!id || !name || width < 1 || height < 1 || seen.has(id)) continue;
+    const safe = (c.safe ?? {}) as Record<string, unknown>;
+    seen.add(id);
+    out.push({
+      id,
+      name,
+      section: c.section === 'screens' ? 'screens' : 'social-web',
+      width,
+      height,
+      safe: {
+        sides: Math.max(0, Math.round(num(safe.sides, 0))),
+        ends: Math.max(0, Math.round(num(safe.ends, 0))),
+      },
+      quantity: Math.min(10, Math.max(1, Math.round(num(c.quantity, 1)))),
+    });
+  }
+  return out;
+}
+
+/** Saved presets, checked the same way and never allowed to shadow a shipped id. */
+export function normalizePresets(raw: unknown): Preset[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Preset[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const p = entry as Record<string, unknown>;
+    const id = typeof p.id === 'string' ? p.id : '';
+    const name = typeof p.name === 'string' ? p.name.trim() : '';
+    if (!id || !name || seen.has(id) || findPreset(id)) continue;
+    const include = Array.isArray(p.include)
+      ? p.include.filter((v): v is string => typeof v === 'string')
+      : p.include === 'all'
+        ? ('all' as const)
+        : [];
+    const quantities: Record<string, number> = {};
+    if (p.quantities && typeof p.quantities === 'object') {
+      for (const [key, value] of Object.entries(p.quantities as Record<string, unknown>)) {
+        if (typeof value === 'number' && Number.isFinite(value)) quantities[key] = Math.round(value);
+      }
+    }
+    seen.add(id);
+    out.push({
+      id,
+      name,
+      include,
+      quantities,
+      customs: normalizeCustoms(p.customs),
+      saved: true,
+    });
+  }
+  return out;
 }
