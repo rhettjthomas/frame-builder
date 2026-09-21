@@ -8,8 +8,11 @@ import type { BuildItem } from '../core/messages';
 
 const WHITE: SolidPaint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } };
 
-/** The plugin's rose at low alpha, so the guides read as Frame Builder's. */
-const GRID_COLOR = { r: 0.859, g: 0.325, b: 0.459, a: 0.1 };
+/**
+ * The plugin's rose. Figma's own default grid alpha of 0.1 is far too faint on a
+ * 3840-wide frame viewed zoomed out, which is most of this library.
+ */
+const GRID_COLOR = { r: 0.859, g: 0.325, b: 0.459, a: 0.15 };
 
 export interface BuildResult {
   section: SectionNode;
