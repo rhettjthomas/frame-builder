@@ -37,7 +37,7 @@ describe('planFrames', () => {
   const plan = planFrames('Hope Has a Name', sermonSeriesItems());
 
   it('plans one frame per requested copy', () => {
-    expect(plan.frames.length).toBe(18);
+    expect(plan.frames.length).toBe(20);
   });
 
   it('never overlaps two frames', () => {
@@ -94,6 +94,13 @@ describe('planFrames', () => {
       const y = plan.frames.find((f) => f.deliverableId === id)!.y;
       const sharing = plan.frames.filter((f) => f.y === y && f.deliverableId !== id);
       expect(sharing.map((f) => f.name), id).toEqual([]);
+    }
+  });
+
+  it('keeps both covers on the row of single social frames', () => {
+    const web = plan.frames.find((f) => f.deliverableId === 'web')!;
+    for (const id of ['youtube-cover', 'facebook-cover']) {
+      expect(plan.frames.find((f) => f.deliverableId === id)!.y, id).toBe(web.y);
     }
   });
 

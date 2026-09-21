@@ -1,4 +1,4 @@
-import { DELIVERABLES, deliverablesIn, type Deliverable } from './deliverables';
+import { DELIVERABLES, type Deliverable } from './deliverables';
 
 export interface Preset {
   id: string;
@@ -9,8 +9,6 @@ export interface Preset {
   quantities?: Readonly<Record<string, number>>;
 }
 
-const SOCIAL_AND_WEB = deliverablesIn('social-web').map((d) => d.id);
-
 export const SHIPPED_PRESETS: readonly Preset[] = [
   {
     id: 'sermon-series',
@@ -18,9 +16,11 @@ export const SHIPPED_PRESETS: readonly Preset[] = [
     include: 'all',
   },
   {
+    // Listed out rather than derived from a section, so a deliverable added to
+    // the library later has to be opted in here deliberately.
     id: 'event-launch',
     name: 'Event Launch',
-    include: ['hero-4k', 'lower-third', ...SOCIAL_AND_WEB],
+    include: ['hero-4k', 'lower-third', 'square', 'post', 'post-bg', 'story', 'story-bg', 'web', 'carousel'],
     quantities: { 'lower-third': 1 },
   },
   {
