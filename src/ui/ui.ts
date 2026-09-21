@@ -45,7 +45,9 @@ const dom = {
   menuAbout: el('menu-about'),
   settingsBtn: el<HTMLButtonElement>('settings-btn'),
   settingsMenu: el('settings-menu'),
-  folderPrefixCheck: el('folder-prefix-check'),
+  folderPrefix: el<HTMLInputElement>('folder-prefix'),
+  folderPrefixExample: el('folder-prefix-example'),
+  selectSeries: el<HTMLButtonElement>('select-series'),
   preset: el<HTMLSelectElement>('preset'),
   seriesName: el<HTMLInputElement>('series-name'),
   seriesId: el('series-id'),
@@ -299,11 +301,24 @@ function renderFooter() {
 function render() {
   if (dom.preset.options.length === 0) renderPresets();
   dom.preset.value = state.presetId;
-  // A tick rather than a checkbox: this sits in a menu, where a control that
-  // looks clickable but isn't would be worse than a mark that just reports.
-  dom.folderPrefixCheck.textContent = state.settings.folderPrefix ? '✓' : '';
+  renderFolderPrefix();
   renderChecklist();
   renderFooter();
+}
+
+/**
+ * Show what the option actually does to a name, using a real deliverable, so the
+ * effect is visible before building rather than after.
+ */
+function renderFolderPrefix() {
+  dom.folderPrefix.checked = state.settings.folderPrefix;
+  const sample = library().find((d) => state.rows[d.id]?.checked) ?? library()[0];
+  const series = dom.seriesName.value.trim() || 'Hope Has a Name';
+  dom.folderPrefixExample.textContent = sample
+    ? state.settings.folderPrefix
+      ? `${sample.folder}/${series}_${sample.name} 01`
+      : `${series}_${sample.name} 01`
+    : "Figma's own export turns the slash into a subfolder.";
 }
 
 /* ------------------------------------------------------------------ notices */
@@ -641,6 +656,18 @@ document.addEventListener('click', (e) => {
   if (!dom.settingsMenu.hidden && !dom.settingsMenu.contains(e.target as Node)) closeMenu();
 });
 
+dom.folderPrefix.addEventListener('change', () => {
+  state.settings.folderPrefix = dom.folderPrefix.checked;
+  save();
+  renderFolderPrefix();
+});
+
+dom.selectSeries.addEventListener('click', () => {
+  showError('');
+  showStatus('Looking…');
+  post({ type: 'command', command: 'select-series' });
+});
+
 dom.settingsMenu.addEventListener('click', (e) => {
   const button = (e.target as HTMLElement).closest('button');
   const command = button?.dataset.command;
@@ -652,14 +679,6 @@ dom.settingsMenu.addEventListener('click', (e) => {
     return;
   }
   const action = button?.dataset.action;
-  if (action === 'folder-prefix') {
-    state.settings.folderPrefix = !state.settings.folderPrefix;
-    save();
-    render();
-    // Leave the menu open: this is a toggle, and seeing the tick change is the
-    // confirmation that it worked.
-    return;
-  }
   if (action === 'reset') {
     const settings = state.settings;
     state = stateFromPreset(
@@ -699,6 +718,7 @@ dom.newPresetName.addEventListener('keydown', (e) => {
 
 dom.seriesName.addEventListener('input', () => {
   showError('');
+  renderFolderPrefix();
   renderFooter();
 });
 

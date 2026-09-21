@@ -10,7 +10,7 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-v0.9.0. Feature complete for a first Community release: builds the frames, sets
+v0.9.1. Feature complete for a first Community release: builds the frames, sets
 them up for Figma's own export, handles custom sizes and custom groups, saves and
 shares presets, and has selection commands for working with a series afterwards.
 
@@ -48,8 +48,9 @@ and `npm test`.
 
 ## Selection commands
 
-In the window's settings menu. Each works from the current selection rather than
-asking a question.
+Select frames in this series has a button under the settings gear, since it is
+the one used constantly. The rest are in the settings menu. Each works from the
+current selection rather than asking a question.
 
 - **Select frames in this series** — select one frame of the series and this
   selects the rest on that page, reporting how many are on other pages. Figma's

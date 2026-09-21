@@ -127,3 +127,59 @@ export function untagSelection(): string {
   const noun = cleared === 1 ? 'frame' : 'frames';
   return `Removed the series tags from ${cleared} ${noun}.`;
 }
+
+/** A leading `SOMETHING/` on a layer name, which is how Figma makes a subfolder. */
+const LEADING_FOLDER = /^[^/]+\//;
+
+/**
+ * Add or strip the delivery folder on the names of a series' frames.
+ *
+ * The same thing the build option does, but for frames that already exist, so
+ * deciding after the fact doesn't mean rebuilding. The folder comes from each
+ * frame's own tag, so a frame renamed by hand still gets the right one.
+ */
+export async function setFolderPrefix(add: boolean): Promise<string> {
+  const seriesId = seriesFromSelection();
+  if (!seriesId) {
+    return 'Select a frame from the series first, then run this again.';
+  }
+
+  await figma.loadAllPagesAsync();
+  let changed = 0;
+  let missingFolder = 0;
+
+  for (const page of figma.root.children) {
+    const frames = page
+      .findAllWithCriteria({ types: ['FRAME'], pluginData: { keys: [TAG.seriesId] } })
+      .filter((node) => belongsTo(node, seriesId));
+
+    for (const frame of frames) {
+      const folder = readTags(frame)?.folder;
+      const bare = frame.name.replace(LEADING_FOLDER, '');
+
+      if (add) {
+        if (!folder) {
+          missingFolder++;
+          continue;
+        }
+        const wanted = `${folder}/${bare}`;
+        if (frame.name === wanted) continue;
+        frame.name = wanted;
+      } else {
+        if (frame.name === bare) continue;
+        frame.name = bare;
+      }
+      changed++;
+    }
+  }
+
+  const verb = add ? 'Added the folder to' : 'Removed the folder from';
+  if (changed === 0) {
+    return add
+      ? `Every frame in ${seriesId} already has its folder.`
+      : `No frame in ${seriesId} has a folder in its name.`;
+  }
+  const noun = changed === 1 ? 'name' : 'names';
+  const skipped = missingFolder > 0 ? ` ${missingFolder} had no folder tag and were left alone.` : '';
+  return `${verb} ${changed} ${noun}.${skipped}`;
+}

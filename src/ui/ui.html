@@ -15,22 +15,25 @@
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm0 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5.4-2.6-.9-.3-.2-.6.4-.8a.6.6 0 0 0-.1-.7l-.8-.8a.6.6 0 0 0-.7-.1l-.8.4-.6-.2-.3-.9A.6.6 0 0 0 8.8 2H7.2a.6.6 0 0 0-.6.4l-.3.9-.6.2-.8-.4a.6.6 0 0 0-.7.1l-.8.8a.6.6 0 0 0-.1.7l.4.8-.2.6-.9.3a.6.6 0 0 0-.4.6v1.6c0 .3.2.5.4.6l.9.3.2.6-.4.8a.6.6 0 0 0 .1.7l.8.8c.2.2.5.2.7.1l.8-.4.6.2.3.9c.1.2.3.4.6.4h1.6c.3 0 .5-.2.6-.4l.3-.9.6-.2.8.4c.2.1.5.1.7-.1l.8-.8a.6.6 0 0 0 .1-.7l-.4-.8.2-.6.9-.3c.2-.1.4-.3.4-.6V7.5a.6.6 0 0 0-.4-.6Zm-.6 1.7-1.1.4-.5 1.2.5 1-.5.5-1-.5-1.2.5-.4 1.1h-.8l-.4-1.1-1.2-.5-1 .5-.5-.5.5-1-.5-1.2-1.1-.4v-.8l1.1-.4.5-1.2-.5-1 .5-.5 1 .5 1.2-.5.4-1.1h.8l.4 1.1 1.2.5 1-.5.5.5-.5 1 .5 1.2 1.1.4v.8Z"/></svg>
   </button>
   <div class="menu" id="settings-menu" role="menu" hidden>
-    <button role="menuitem" data-action="folder-prefix">
-      <span class="menu-check" id="folder-prefix-check"></span>Name frames with delivery folder
-    </button>
-    <div class="menu-note">Adds SCREENS/ or SOCIAL MEDIA/ to each name, so Figma's own export makes the folders.</div>
-    <div class="menu-sep" role="separator"></div>
     <button role="menuitem" data-action="share-presets">Presets (save, share, load)…</button>
     <button role="menuitem" data-action="reset">Reset checklist to preset</button>
     <div class="menu-sep" role="separator"></div>
+    <div class="menu-note">Works on the series you have selected</div>
+    <button role="menuitem" data-command="prefix-on">Add delivery folders to these names</button>
+    <button role="menuitem" data-command="prefix-off">Remove delivery folders from these names</button>
+    <div class="menu-sep" role="separator"></div>
     <div class="menu-note">Works on what's selected in the file</div>
-    <button role="menuitem" data-command="select-series">Select frames in this series</button>
     <button role="menuitem" data-command="retag">Add selection to this series</button>
     <button role="menuitem" data-command="untag">Remove series tags from selection</button>
     <div class="menu-sep" role="separator"></div>
     <div class="menu-note" id="menu-about"></div>
+    <div class="menu-note">By Midwood Road LLC. Free to use.</div>
   </div>
 </header>
+
+<div class="toolbar">
+  <button type="button" class="secondary small" id="select-series">Select frames in this series</button>
+</div>
 
 
 <main class="content">
@@ -53,6 +56,17 @@
       <input id="series-name" type="text" placeholder="Hope Has a Name" autocomplete="off" spellcheck="false" />
       <p class="field-help muted" id="series-id">Names the section and tags every frame.</p>
     </div>
+
+    <label class="toggle-row" for="folder-prefix">
+      <span class="check">
+        <input type="checkbox" id="folder-prefix" />
+        <span class="check-box"></span>
+      </span>
+      <span class="toggle-text">
+        <span class="toggle-label">Put the delivery folder in each name</span>
+        <span class="toggle-help" id="folder-prefix-example"></span>
+      </span>
+    </label>
 
     <div id="checklist"></div>
 

@@ -10,7 +10,12 @@ import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY, type BuildState } from './core/state';
 import { buildLibrary } from './core/deliverables';
 import { buildSeries } from './main/builder';
-import { retagSelection, selectSeries, untagSelection } from './main/commands';
+import {
+  retagSelection,
+  selectSeries,
+  setFolderPrefix,
+  untagSelection,
+} from './main/commands';
 
 declare const __VERSION__: string;
 
@@ -23,6 +28,10 @@ async function runCommand(command: string): Promise<string> {
       return retagSelection(__VERSION__);
     case 'untag':
       return untagSelection();
+    case 'prefix-on':
+      return await setFolderPrefix(true);
+    case 'prefix-off':
+      return await setFolderPrefix(false);
     default:
       return `Frame Builder doesn't know the command "${command}".`;
   }

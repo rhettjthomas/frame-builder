@@ -23,7 +23,12 @@ export type UIToMain =
   /** A selection command run from the window. */
   | { type: 'command'; command: SelectionCommand };
 
-export type SelectionCommand = 'select-series' | 'retag' | 'untag';
+export type SelectionCommand =
+  | 'select-series'
+  | 'retag'
+  | 'untag'
+  | 'prefix-on'
+  | 'prefix-off';
 
 /** Main thread → UI iframe. */
 export type MainToUI =
