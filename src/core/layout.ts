@@ -13,6 +13,7 @@ import {
   type SafeMargin,
   type Section,
 } from './deliverables';
+import { safeFolder } from './delivery';
 import type { BuildItem } from './messages';
 
 /** Space between frames in a row, and between rows. */
@@ -61,11 +62,11 @@ function sectionOrder(library: Library): Section[] {
  * increments a trailing number when a layer is duplicated, so copies made by hand
  * carry on the sequence by themselves and nothing has to renumber them later.
  *
- * With `folderPrefix`, the name gains its delivery folder, as in
- * `SOCIAL MEDIA/Hope Has a Name_Story 01`. Figma turns a slash into a subfolder
- * when several layers are exported at once, so the delivery structure comes out
- * of its own export with nothing else to do. The cost is a longer name in the
- * layers panel, which is why it's a setting rather than the default.
+ * With `folderPrefix`, the name gains a full delivery path, as in
+ * `HOPE HAS A NAME/SOCIAL MEDIA/Hope Has a Name_Story 01`. Figma nests a folder
+ * per slash when several layers are exported at once, so two levels give the
+ * series its own folder with the groups inside it, rather than dropping SCREENS
+ * and SOCIAL MEDIA loose wherever the export landed.
  */
 export function frameName(
   seriesName: string,
@@ -74,7 +75,12 @@ export function frameName(
   folderPrefix = false,
 ): string {
   const base = `${seriesName}_${d.name} ${String(index).padStart(2, '0')}`;
-  return folderPrefix ? `${d.folder}/${base}` : base;
+  return folderPrefix ? `${deliveryPath(seriesName, d.folder)}/${base}` : base;
+}
+
+/** `HOPE HAS A NAME/SCREENS`: the master folder, then the group inside it. */
+export function deliveryPath(seriesName: string, folder: string): string {
+  return `${safeFolder(seriesName)}/${folder}`;
 }
 
 /** The checked deliverables in library order, each with how many frames it wants. */

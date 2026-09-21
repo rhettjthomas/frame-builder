@@ -31,13 +31,28 @@
   </div>
 </header>
 
-<div class="toolbar">
-  <button type="button" class="secondary small" id="select-series">Select frames in this series</button>
-</div>
-
 
 <main class="content">
   <section id="panel-build" class="panel">
+    <div class="group">
+      <div class="group-head">
+        <span class="group-title">Settings</span>
+      </div>
+      <div class="rows">
+        <label class="toggle-row" for="folder-prefix">
+          <span class="toggle-text">
+            <span class="toggle-label">Put the delivery folder in each name</span>
+            <span class="toggle-help">On by default, so frames you select and export arrive in organized folders.</span>
+            <span class="toggle-help" id="folder-prefix-example"></span>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="folder-prefix" />
+            <span class="switch-track"></span>
+          </span>
+        </label>
+      </div>
+    </div>
+
     <div class="field">
       <label class="field-label" for="preset">Preset</label>
       <div class="select">
@@ -57,17 +72,6 @@
       <p class="field-help muted" id="series-id">Names the section and tags every frame.</p>
     </div>
 
-    <label class="toggle-row" for="folder-prefix">
-      <span class="check">
-        <input type="checkbox" id="folder-prefix" />
-        <span class="check-box"></span>
-      </span>
-      <span class="toggle-text">
-        <span class="toggle-label">Put the delivery folder in each name</span>
-        <span class="toggle-help" id="folder-prefix-example"></span>
-      </span>
-    </label>
-
     <div id="checklist"></div>
 
     <button type="button" class="add-custom" id="add-custom">
@@ -83,6 +87,7 @@
     <div class="status-label"><span id="status-label"></span></div>
   </div>
   <button class="primary" id="build-btn" disabled>Build frames</button>
+  <button type="button" class="secondary" id="select-series">Select frames in this series</button>
 </footer>
 
 <div class="sheet" id="custom-sheet" role="dialog" aria-modal="true" aria-labelledby="custom-title" hidden>

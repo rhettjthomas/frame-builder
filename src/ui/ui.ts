@@ -23,6 +23,7 @@ import {
 import type { BuildItem, MainToUI, SelectionCommand, UIToMain } from '../core/messages';
 import { allPresets, type Preset } from '../core/presets';
 import { safeFolder } from '../core/delivery';
+import { deliveryPath } from '../core/layout';
 import { toSeriesId } from '../core/slug';
 import {
   frameCount,
@@ -314,11 +315,14 @@ function renderFolderPrefix() {
   dom.folderPrefix.checked = state.settings.folderPrefix;
   const sample = library().find((d) => state.rows[d.id]?.checked) ?? library()[0];
   const series = dom.seriesName.value.trim() || 'Hope Has a Name';
-  dom.folderPrefixExample.textContent = sample
-    ? state.settings.folderPrefix
-      ? `${sample.folder}/${series}_${sample.name} 01`
-      : `${series}_${sample.name} 01`
-    : "Figma's own export turns the slash into a subfolder.";
+  if (!sample) {
+    dom.folderPrefixExample.textContent = '';
+    return;
+  }
+  const base = `${series}_${sample.name} 01`;
+  dom.folderPrefixExample.textContent = state.settings.folderPrefix
+    ? `${deliveryPath(series, sample.folder)}/${base}`
+    : base;
 }
 
 /* ------------------------------------------------------------------ notices */

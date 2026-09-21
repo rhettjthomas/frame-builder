@@ -10,7 +10,7 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-v0.9.1. Feature complete for a first Community release: builds the frames, sets
+v0.9.2. Feature complete for a first Community release: builds the frames, sets
 them up for Figma's own export, handles custom sizes and custom groups, saves and
 shares presets, and has selection commands for working with a series afterwards.
 

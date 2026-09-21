@@ -25,16 +25,15 @@ export interface Row {
 
 export interface BuildSettings {
   /**
-   * Prefix each frame name with its delivery folder, so Figma's own export turns
-   * the slash into a subfolder. Off by default: the shipped behaviour has to suit
-   * a church seeing the plugin for the first time, and a long prefixed name in the
-   * layers panel is a surprise until you know why it's there.
+   * Prefix each frame name with its delivery path, so Figma's own export builds
+   * the package. On by default: arriving at a sorted set of folders is worth more
+   * than a shorter name in the layers panel, and the package is the point.
    */
   folderPrefix: boolean;
 }
 
 export const DEFAULT_SETTINGS: BuildSettings = {
-  folderPrefix: false,
+  folderPrefix: true,
 };
 
 export interface BuildState {

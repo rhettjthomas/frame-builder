@@ -37,12 +37,19 @@ describe('frameName', () => {
     expect(name.split('_')).toEqual(['Hope Has a Name', 'PostBG 02']);
   });
 
-  it('prefixes the delivery folder when asked, so Figma export makes folders', () => {
-    expect(frameName('Hope', findDeliverable('story')!, 1, true)).toBe(
-      'SOCIAL MEDIA/Hope_Story 01',
+  it('prefixes the master folder and the group, so the package arrives whole', () => {
+    expect(frameName('Hope Has a Name', findDeliverable('story')!, 1, true)).toBe(
+      'HOPE HAS A NAME/SOCIAL MEDIA/Hope Has a Name_Story 01',
     );
-    expect(frameName('Hope', findDeliverable('hero-4k')!, 1, true)).toBe('SCREENS/Hope_Hero 4K 01');
-    expect(frameName('Hope', findDeliverable('web')!, 1, true)).toBe('WEB/Hope_Web 01');
+    expect(frameName('Hope', findDeliverable('hero-4k')!, 1, true)).toBe(
+      'HOPE/SCREENS/Hope_Hero 4K 01',
+    );
+    expect(frameName('Hope', findDeliverable('web')!, 1, true)).toBe('HOPE/WEB/Hope_Web 01');
+  });
+
+  it('cleans a series name a file system would refuse, in the folder only', () => {
+    const name = frameName('Faith/Works', findDeliverable('story')!, 1, true);
+    expect(name).toBe('FAITH-WORKS/SOCIAL MEDIA/Faith/Works_Story 01');
   });
 
   it('leaves the name alone when the prefix is off, which is the default', () => {
@@ -142,11 +149,18 @@ describe('planFrames', () => {
 });
 
 describe('the folder prefix', () => {
-  it('reaches every planned frame', () => {
+  it('reaches every planned frame, with both folder levels', () => {
     const plan = planFrames('Hope Has a Name', sermonSeriesItems(), true);
     for (const f of plan.frames) {
-      expect(f.name.includes('/'), f.name).toBe(true);
+      expect(f.name.startsWith('HOPE HAS A NAME/'), f.name).toBe(true);
+      expect(f.name.split('/').length, f.name).toBe(3);
     }
+  });
+
+  it('gives every frame the same master folder, so they land together', () => {
+    const plan = planFrames('Hope Has a Name', sermonSeriesItems(), true);
+    const masters = new Set(plan.frames.map((f) => f.name.split('/')[0]));
+    expect([...masters]).toEqual(['HOPE HAS A NAME']);
   });
 
   it('does not move anything, since the name is all that changes', () => {

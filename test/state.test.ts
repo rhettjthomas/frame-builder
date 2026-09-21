@@ -87,20 +87,23 @@ describe('frameCount', () => {
 });
 
 describe('settings', () => {
-  it('defaults the folder prefix off, so shipped names stay plain', () => {
-    expect(stateFromPreset('sermon-series').settings.folderPrefix).toBe(false);
+  it('defaults the folder prefix on, so an export arrives sorted', () => {
+    expect(stateFromPreset('sermon-series').settings.folderPrefix).toBe(true);
   });
 
-  it('keeps a stored setting', () => {
+  it('keeps a stored setting, including one turned off deliberately', () => {
+    expect(normalizeState({ settings: { folderPrefix: false } }).settings.folderPrefix).toBe(false);
     expect(normalizeState({ settings: { folderPrefix: true } }).settings.folderPrefix).toBe(true);
   });
 
-  it('ignores a mistyped setting rather than taking it as truthy', () => {
-    expect(normalizeState({ settings: { folderPrefix: 'yes' } }).settings.folderPrefix).toBe(false);
+  it('leaves a mistyped setting at the default rather than coercing it', () => {
+    for (const junk of ['yes', 'false', 0, 1, null]) {
+      expect(normalizeState({ settings: { folderPrefix: junk } }).settings.folderPrefix).toBe(true);
+    }
   });
 
   it('survives storage with no settings at all, as older saves have', () => {
-    expect(normalizeState({ presetId: 'custom' }).settings.folderPrefix).toBe(false);
+    expect(normalizeState({ presetId: 'custom' }).settings.folderPrefix).toBe(true);
   });
 });
 

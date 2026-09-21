@@ -8,6 +8,7 @@
  * Each command works from the current selection rather than asking a question,
  * so there is nothing to fill in and no window to wait for.
  */
+import { deliveryPath } from '../core/layout';
 import { belongsTo, clearTags, readTags, stampTags, TAG } from '../core/tags';
 
 /**
@@ -128,8 +129,12 @@ export function untagSelection(): string {
   return `Removed the series tags from ${cleared} ${noun}.`;
 }
 
-/** A leading `SOMETHING/` on a layer name, which is how Figma makes a subfolder. */
-const LEADING_FOLDER = /^[^/]+\//;
+/**
+ * Everything up to the last slash: the folder path Figma would build from the
+ * name. Stripping all of it rather than one level means a name carrying the
+ * master folder and the group both come off in one go.
+ */
+const LEADING_PATH = /^.*\//;
 
 /**
  * Add or strip the delivery folder on the names of a series' frames.
@@ -145,6 +150,20 @@ export async function setFolderPrefix(add: boolean): Promise<string> {
   }
 
   await figma.loadAllPagesAsync();
+
+  // The section names the series, and so names the master folder. Without one,
+  // the slug is the next best thing the frames all agree on.
+  let seriesName = seriesId;
+  for (const page of figma.root.children) {
+    const section = page
+      .findAllWithCriteria({ types: ['SECTION'], pluginData: { keys: [TAG.seriesId] } })
+      .find((node) => belongsTo(node, seriesId));
+    if (section) {
+      seriesName = section.name;
+      break;
+    }
+  }
+
   let changed = 0;
   let missingFolder = 0;
 
@@ -155,14 +174,14 @@ export async function setFolderPrefix(add: boolean): Promise<string> {
 
     for (const frame of frames) {
       const folder = readTags(frame)?.folder;
-      const bare = frame.name.replace(LEADING_FOLDER, '');
+      const bare = frame.name.replace(LEADING_PATH, '');
 
       if (add) {
         if (!folder) {
           missingFolder++;
           continue;
         }
-        const wanted = `${folder}/${bare}`;
+        const wanted = `${deliveryPath(seriesName, folder)}/${bare}`;
         if (frame.name === wanted) continue;
         frame.name = wanted;
       } else {
@@ -173,11 +192,11 @@ export async function setFolderPrefix(add: boolean): Promise<string> {
     }
   }
 
-  const verb = add ? 'Added the folder to' : 'Removed the folder from';
+  const verb = add ? 'Added the delivery path to' : 'Removed the delivery path from';
   if (changed === 0) {
     return add
-      ? `Every frame in ${seriesId} already has its folder.`
-      : `No frame in ${seriesId} has a folder in its name.`;
+      ? `Every frame in ${seriesId} already has its delivery path.`
+      : `No frame in ${seriesId} has a delivery path in its name.`;
   }
   const noun = changed === 1 ? 'name' : 'names';
   const skipped = missingFolder > 0 ? ` ${missingFolder} had no folder tag and were left alone.` : '';
