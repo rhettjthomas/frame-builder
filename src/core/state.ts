@@ -14,10 +14,25 @@ export interface Row {
   quantity: number;
 }
 
+export interface BuildSettings {
+  /**
+   * Prefix each frame name with its delivery folder, so Figma's own export turns
+   * the slash into a subfolder. Off by default: the shipped behaviour has to suit
+   * a church seeing the plugin for the first time, and a long prefixed name in the
+   * layers panel is a surprise until you know why it's there.
+   */
+  folderPrefix: boolean;
+}
+
+export const DEFAULT_SETTINGS: BuildSettings = {
+  folderPrefix: false,
+};
+
 export interface BuildState {
   presetId: string;
   /** Keyed by deliverable id. Every shipped deliverable always has a row. */
   rows: Record<string, Row>;
+  settings: BuildSettings;
 }
 
 /** The checklist a preset describes, with quantities clamped to each range. */
@@ -30,7 +45,7 @@ export function stateFromPreset(presetId: string): BuildState {
       quantity: clampQuantity(d, presetQuantity(preset, d)),
     };
   }
-  return { presetId: preset.id, rows };
+  return { presetId: preset.id, rows, settings: { ...DEFAULT_SETTINGS } };
 }
 
 export const DEFAULT_STATE = stateFromPreset(DEFAULT_PRESET_ID);
@@ -46,6 +61,14 @@ export function normalizeState(stored: unknown): BuildState {
 
   if (typeof raw.presetId === 'string' && findPreset(raw.presetId)) {
     base.presetId = raw.presetId;
+  }
+
+  const settings = raw.settings;
+  if (settings && typeof settings === 'object') {
+    for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof BuildSettings)[]) {
+      const value = (settings as Record<string, unknown>)[key];
+      if (typeof value === 'boolean') base.settings[key] = value;
+    }
   }
 
   const rows = raw.rows;

@@ -2,7 +2,7 @@
  * Creates the frames. Everything about where they go is decided in core/layout,
  * so this module only turns a plan into Figma nodes.
  */
-import type { SafeMargin } from '../core/deliverables';
+import { findDeliverable, type SafeMargin } from '../core/deliverables';
 import { planFrames, type PlannedFrame } from '../core/layout';
 import type { BuildItem } from '../core/messages';
 import { stampTags } from '../core/tags';
@@ -79,6 +79,15 @@ function createFrame(planned: PlannedFrame, seriesId: string, version: string): 
   frame.fills = planned.fill ? [WHITE] : [];
   frame.layoutGrids = safeGrids(planned.safe);
   frame.clipsContent = true;
+  // The plugin can't write to a folder you choose, so it sets the frame up for
+  // Figma's own export instead: select the section, hit Export, and every frame
+  // already carries the right format at full size.
+  frame.exportSettings = [
+    {
+      format: findDeliverable(planned.deliverableId)?.format ?? 'JPG',
+      constraint: { type: 'SCALE', value: 1 },
+    },
+  ];
   stampTags(frame, {
     seriesId,
     deliverable: planned.deliverableId,
@@ -93,8 +102,9 @@ export function buildSeries(
   seriesId: string,
   items: readonly BuildItem[],
   version: string,
+  folderPrefix = false,
 ): BuildResult {
-  const plan = planFrames(seriesName, items);
+  const plan = planFrames(seriesName, items, folderPrefix);
   if (plan.frames.length === 0) throw new Error('Nothing was checked, so there is nothing to build.');
 
   const section = figma.createSection();

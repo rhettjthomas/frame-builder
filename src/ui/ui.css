@@ -328,3 +328,10 @@ input[type='text']:focus, select:focus {
 
 .progress { height: 4px; margin-top: 6px; border-radius: 2px; background: var(--bg-secondary); overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
+
+.menu-check {
+  display: inline-block;
+  width: 12px;
+  margin-right: 6px;
+  text-align: center;
+}

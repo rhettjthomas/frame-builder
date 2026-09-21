@@ -10,22 +10,15 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-Milestone 5 of 7 (v0.5.0). Build creates the frames: correctly sized and named,
-white filled except Lower Thirds, unsafe margins marked with layout grids,
-arranged in a titled section, and every frame tagged with its series.
+v0.6.0. Builds the frames and sets them up for Figma's own export. Presets and
+Community polish are still to come.
 
-The Export tab finds every tagged frame across every page, groups them by
-deliverable type with counts, and lets frames be excluded without deleting them.
-It keeps itself current: opening the tab searches the file, and while the tab is
-open a canvas edit triggers a fresh search.
-Export writes the delivery package straight into a folder you choose, rather than
-producing a ZIP: SCREENS, SOCIAL MEDIA and WEB filled from each frame's group tag,
-plus empty VIDEOS and PROPRESENTER folders. Lower Thirds go out as PNG, everything
-else as JPG, at native size. Layer names are never rewritten, so a frame renamed
-by hand keeps its name and still lands in the right folder.
-
-Choosing a folder relies on the File System Access API, which Figma's sandbox may
-refuse. If it does, the plugin says so rather than failing quietly.
+Frame Builder does not export. A Figma plugin cannot write to a folder the user
+chooses, and Figma's own export can, so the plugin's job is to make that export
+correct rather than to reinvent it: every frame is built carrying the right
+format at full size, so selecting the section and hitting Export just works. A
+setting prefixes each frame name with its delivery folder, because Figma turns a
+slash in a layer name into a subfolder when several layers are exported at once.
 
 ## Running it
 

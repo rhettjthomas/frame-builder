@@ -36,6 +36,19 @@ describe('frameName', () => {
     const name = frameName('Hope Has a Name', findDeliverable('post-bg')!, 2);
     expect(name.split('_')).toEqual(['Hope Has a Name', 'PostBG 02']);
   });
+
+  it('prefixes the delivery folder when asked, so Figma export makes folders', () => {
+    expect(frameName('Hope', findDeliverable('story')!, 1, true)).toBe(
+      'SOCIAL MEDIA/Hope_Story 01',
+    );
+    expect(frameName('Hope', findDeliverable('hero-4k')!, 1, true)).toBe('SCREENS/Hope_Hero 4K 01');
+    expect(frameName('Hope', findDeliverable('web')!, 1, true)).toBe('WEB/Hope_Web 01');
+  });
+
+  it('leaves the name alone when the prefix is off, which is the default', () => {
+    expect(frameName('Hope', findDeliverable('story')!, 1)).toBe('Hope_Story 01');
+    expect(frameName('Hope', findDeliverable('story')!, 1, false)).toBe('Hope_Story 01');
+  });
 });
 
 describe('planFrames', () => {
@@ -125,6 +138,23 @@ describe('planFrames', () => {
 
   it('routes Web to its own export group', () => {
     expect(plan.frames.find((f) => f.deliverableId === 'web')!.group).toBe('web');
+  });
+});
+
+describe('the folder prefix', () => {
+  it('reaches every planned frame', () => {
+    const plan = planFrames('Hope Has a Name', sermonSeriesItems(), true);
+    for (const f of plan.frames) {
+      expect(f.name.includes('/'), f.name).toBe(true);
+    }
+  });
+
+  it('does not move anything, since the name is all that changes', () => {
+    const plain = planFrames('Hope', sermonSeriesItems());
+    const prefixed = planFrames('Hope', sermonSeriesItems(), true);
+    expect(prefixed.frames.map((f) => [f.x, f.y])).toEqual(plain.frames.map((f) => [f.x, f.y]));
+    expect(prefixed.width).toBe(plain.width);
+    expect(prefixed.height).toBe(plain.height);
   });
 });
 

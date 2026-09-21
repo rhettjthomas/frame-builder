@@ -12,6 +12,7 @@ import {
   type SafeMargin,
   type Section,
 } from './deliverables';
+import { folderFor } from './delivery';
 import type { BuildItem } from './messages';
 
 /** Space between frames in a row, and between rows. */
@@ -51,14 +52,22 @@ const SECTION_ORDER: readonly Section[] = ['screens', 'social-web'];
 /**
  * `SeriesName_Deliverable 01`. The space before the number is deliberate: Figma
  * increments a trailing number when a layer is duplicated, so copies made by hand
- * carry on the sequence by themselves and the exporter never has to rename
- * anything in the document.
+ * carry on the sequence by themselves and nothing has to renumber them later.
  *
- * Export folders come from the `group` tag rather than from parsing this name, so
- * a frame renamed by hand still lands in the right folder.
+ * With `folderPrefix`, the name gains its delivery folder, as in
+ * `SOCIAL MEDIA/Hope Has a Name_Story 01`. Figma turns a slash into a subfolder
+ * when several layers are exported at once, so the delivery structure comes out
+ * of its own export with nothing else to do. The cost is a longer name in the
+ * layers panel, which is why it's a setting rather than the default.
  */
-export function frameName(seriesName: string, d: Deliverable, index: number): string {
-  return `${seriesName}_${d.name} ${String(index).padStart(2, '0')}`;
+export function frameName(
+  seriesName: string,
+  d: Deliverable,
+  index: number,
+  folderPrefix = false,
+): string {
+  const base = `${seriesName}_${d.name} ${String(index).padStart(2, '0')}`;
+  return folderPrefix ? `${folderFor(d.group)}/${base}` : base;
 }
 
 /** The checked deliverables in library order, each with how many frames it wants. */
@@ -76,7 +85,11 @@ function resolve(items: readonly BuildItem[]): { d: Deliverable; count: number }
   return out;
 }
 
-export function planFrames(seriesName: string, items: readonly BuildItem[]): Plan {
+export function planFrames(
+  seriesName: string,
+  items: readonly BuildItem[],
+  folderPrefix = false,
+): Plan {
   const resolved = resolve(items);
   const frames: PlannedFrame[] = [];
 
@@ -119,7 +132,7 @@ export function planFrames(seriesName: string, items: readonly BuildItem[]): Pla
 
         frames.push({
           deliverableId: d.id,
-          name: frameName(seriesName, d, index),
+          name: frameName(seriesName, d, index, folderPrefix),
           index,
           width: d.width,
           height: d.height,

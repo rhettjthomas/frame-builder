@@ -85,3 +85,21 @@ describe('frameCount', () => {
     expect(frameCount(state)).toBe(findDeliverable('bg')!.quantity!.max);
   });
 });
+
+describe('settings', () => {
+  it('defaults the folder prefix off, so shipped names stay plain', () => {
+    expect(stateFromPreset('sermon-series').settings.folderPrefix).toBe(false);
+  });
+
+  it('keeps a stored setting', () => {
+    expect(normalizeState({ settings: { folderPrefix: true } }).settings.folderPrefix).toBe(true);
+  });
+
+  it('ignores a mistyped setting rather than taking it as truthy', () => {
+    expect(normalizeState({ settings: { folderPrefix: 'yes' } }).settings.folderPrefix).toBe(false);
+  });
+
+  it('survives storage with no settings at all, as older saves have', () => {
+    expect(normalizeState({ presetId: 'custom' }).settings.folderPrefix).toBe(false);
+  });
+});
