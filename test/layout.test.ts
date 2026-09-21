@@ -22,14 +22,19 @@ function overlaps(a: PlannedFrame, b: PlannedFrame): boolean {
 }
 
 describe('frameName', () => {
-  it('matches the brief', () => {
-    expect(frameName('Hope Has a Name', findDeliverable('story')!, 1)).toBe('Hope Has a Name_Story_01');
+  it('separates the number with a space, so Figma increments it on duplicate', () => {
+    expect(frameName('Hope Has a Name', findDeliverable('story')!, 1)).toBe('Hope Has a Name_Story 01');
   });
 
   it('pads to two digits and keeps going past nine', () => {
     const carousel = findDeliverable('carousel')!;
-    expect(frameName('Advent', carousel, 9)).toBe('Advent_Carousel_09');
-    expect(frameName('Advent', carousel, 10)).toBe('Advent_Carousel_10');
+    expect(frameName('Advent', carousel, 9)).toBe('Advent_Carousel 09');
+    expect(frameName('Advent', carousel, 10)).toBe('Advent_Carousel 10');
+  });
+
+  it('keeps the series and deliverable joined by an underscore', () => {
+    const name = frameName('Hope Has a Name', findDeliverable('post-bg')!, 2);
+    expect(name.split('_')).toEqual(['Hope Has a Name', 'PostBG 02']);
   });
 });
 

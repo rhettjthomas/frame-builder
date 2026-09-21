@@ -13,7 +13,13 @@ import {
   type Deliverable,
   type Section,
 } from '../core/deliverables';
-import { countFrames, groupForConfirm, type ConfirmGroup, type FoundSeries } from '../core/confirm';
+import {
+  collidingNames,
+  countFrames,
+  groupForConfirm,
+  type ConfirmGroup,
+  type FoundSeries,
+} from '../core/confirm';
 import type { BuildItem, MainToUI, UIToMain } from '../core/messages';
 import { SHIPPED_PRESETS } from '../core/presets';
 import { frameCount, stateFromPreset, type BuildState } from '../core/state';
@@ -260,7 +266,7 @@ function renderSeriesPicker() {
   }
 }
 
-function renderConfirmGroup(group: ConfirmGroup, container: HTMLElement) {
+function renderConfirmGroup(group: ConfirmGroup, clashes: Set<string>, container: HTMLElement) {
   const included = group.frames.filter((f) => !excluded.has(f.nodeId)).length;
 
   const wrap = document.createElement('div');
@@ -337,6 +343,13 @@ function renderConfirmGroup(group: ConfirmGroup, container: HTMLElement) {
     text.append(name, meta);
 
     row.append(rowCheck, text);
+    if (on && clashes.has(frame.name)) {
+      const tag = document.createElement('span');
+      tag.className = 'tag warn';
+      tag.textContent = 'same name';
+      tag.title = 'Another frame in this export has this name; one would overwrite the other';
+      row.appendChild(tag);
+    }
     if (frame.adopted) {
       const tag = document.createElement('span');
       tag.className = 'tag';
@@ -363,15 +376,25 @@ function renderExport() {
   }
 
   const groups = groupForConfirm(series.frames);
-  for (const group of groups) renderConfirmGroup(group, dom.confirm);
+  const includedFrames = series.frames.filter((f) => !excluded.has(f.nodeId));
+  // Only frames actually going into the ZIP can collide inside it.
+  const clashes = collidingNames(includedFrames);
+  for (const group of groups) renderConfirmGroup(group, clashes, dom.confirm);
 
   const total = countFrames(groups);
-  const included = series.frames.filter((f) => !excluded.has(f.nodeId)).length;
+  const included = includedFrames.length;
   const noun = total === 1 ? 'frame' : 'frames';
   dom.seriesSummary.textContent =
     total === included
       ? `${total} ${noun} tagged ${series.seriesId}`
       : `${included} of ${total} ${noun} tagged ${series.seriesId}`;
+
+  if (clashes.size > 0) {
+    const noun = clashes.size === 1 ? 'name is' : 'names are';
+    showError(`${clashes.size} ${noun} used by more than one frame. Rename in the file before exporting.`);
+  } else {
+    showError('');
+  }
 
   dom.exportBtn.textContent = included === 1 ? 'Export 1 frame' : `Export ${included} frames`;
   // Exporting itself is the next milestone; finding and confirming is this one.

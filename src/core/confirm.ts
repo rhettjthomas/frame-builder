@@ -66,3 +66,19 @@ function rank(deliverableId: string): number {
 export function countFrames(groups: readonly ConfirmGroup[]): number {
   return groups.reduce((sum, g) => sum + g.frames.length, 0);
 }
+
+/**
+ * Frame names that appear more than once among the frames being exported.
+ *
+ * Nothing guarantees unique names now that the exporter doesn't rename anything,
+ * and two frames with the same name would quietly overwrite each other inside the
+ * ZIP. Surfacing the clash in the confirm list lets it be fixed in the file,
+ * where the user chose the name, rather than being papered over at export.
+ */
+export function collidingNames(frames: readonly FoundFrame[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const frame of frames) counts.set(frame.name, (counts.get(frame.name) ?? 0) + 1);
+  const clashes = new Set<string>();
+  for (const [name, count] of counts) if (count > 1) clashes.add(name);
+  return clashes;
+}

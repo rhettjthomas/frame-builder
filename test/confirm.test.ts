@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countFrames, groupForConfirm, type FoundFrame } from '../src/core/confirm';
+import { collidingNames, countFrames, groupForConfirm, type FoundFrame } from '../src/core/confirm';
 
 function frame(name: string, deliverableId: string, adopted = false): FoundFrame {
   return {
@@ -68,5 +68,33 @@ describe('countFrames', () => {
 
   it('counts nothing when nothing was found', () => {
     expect(countFrames([])).toBe(0);
+  });
+});
+
+describe('collidingNames', () => {
+  it('finds nothing when every name is unique', () => {
+    const clashes = collidingNames([frame('Hope_Story 01', 'story'), frame('Hope_Story 02', 'story')]);
+    expect([...clashes]).toEqual([]);
+  });
+
+  it('catches two frames that would overwrite each other in the ZIP', () => {
+    const a = frame('Hope_Story 02', 'story');
+    const b = { ...frame('Hope_Story 02', 'story'), nodeId: 'other' };
+    expect([...collidingNames([a, b])]).toEqual(['Hope_Story 02']);
+  });
+
+  it('catches a clash across different deliverable types', () => {
+    const a = frame('Hope_Untitled', 'story');
+    const b = { ...frame('Hope_Untitled', 'square'), nodeId: 'other' };
+    expect([...collidingNames([a, b])]).toEqual(['Hope_Untitled']);
+  });
+
+  it('reports each clashing name once, however many frames share it', () => {
+    const frames = ['a', 'b', 'c'].map((id) => ({ ...frame('Hope_Story 02', 'story'), nodeId: id }));
+    expect([...collidingNames(frames)]).toEqual(['Hope_Story 02']);
+  });
+
+  it('finds nothing in an empty export', () => {
+    expect([...collidingNames([])]).toEqual([]);
   });
 });

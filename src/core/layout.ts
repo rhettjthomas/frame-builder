@@ -25,7 +25,7 @@ export const MAX_ROW_WIDTH = 16000;
 
 export interface PlannedFrame {
   deliverableId: string;
-  /** `SeriesName_Deliverable_01` */
+  /** `SeriesName_Deliverable 01` */
   name: string;
   /** 1-based, counted per deliverable type. */
   index: number;
@@ -48,8 +48,17 @@ export interface Plan {
 /** Screens first, then Social & Web, as the brief specifies. */
 const SECTION_ORDER: readonly Section[] = ['screens', 'social-web'];
 
+/**
+ * `SeriesName_Deliverable 01`. The space before the number is deliberate: Figma
+ * increments a trailing number when a layer is duplicated, so copies made by hand
+ * carry on the sequence by themselves and the exporter never has to rename
+ * anything in the document.
+ *
+ * Export folders come from the `group` tag rather than from parsing this name, so
+ * a frame renamed by hand still lands in the right folder.
+ */
 export function frameName(seriesName: string, d: Deliverable, index: number): string {
-  return `${seriesName}_${d.name}_${String(index).padStart(2, '0')}`;
+  return `${seriesName}_${d.name} ${String(index).padStart(2, '0')}`;
 }
 
 /** The checked deliverables in library order, each with how many frames it wants. */

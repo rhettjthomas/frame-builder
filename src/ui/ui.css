@@ -324,3 +324,4 @@ input[type='text']:focus, select:focus {
   color: var(--text-secondary);
   font-size: 10px;
 }
+.tag.warn { color: var(--text-warning); }
