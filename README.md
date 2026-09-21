@@ -10,8 +10,9 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-v0.7.0. Builds the frames, sets them up for Figma's own export, and handles
-custom sizes and saved presets. Community polish is still to come.
+v0.8.0. Feature complete for a first Community release: builds the frames, sets
+them up for Figma's own export, handles custom sizes and saved presets, and adds
+selection commands for working with a series after the build.
 
 Frame Builder does not export. A Figma plugin cannot write to a folder the user
 chooses, and Figma's own export can, so the plugin's job is to make that export
@@ -44,6 +45,19 @@ person doesn't have.
 
 Other scripts: `npm run build` for a one-off minified build, `npm run typecheck`,
 and `npm test`.
+
+## Menu commands
+
+Run from Plugins, Frame Builder, without opening the window. Each works from the
+current selection rather than asking a question.
+
+- **Select frames in this series** — select one frame of the series and this
+  selects the rest on that page, reporting how many are on other pages. Figma's
+  selection can only hold nodes from one page, so the ones elsewhere are counted
+  rather than silently left out.
+- **Add selection to this series** — adopts hand-built frames. The series comes
+  from the section they sit in, or from a tagged frame selected alongside them.
+- **Remove series tags from selection** — for art repurposed out of a series.
 
 ## How it tracks frames
 

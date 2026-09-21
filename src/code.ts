@@ -10,10 +10,45 @@ import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY, type BuildState } from './core/state';
 import { buildLibrary } from './core/deliverables';
 import { buildSeries } from './main/builder';
+import { retagSelection, selectSeries, untagSelection } from './main/commands';
 
 declare const __VERSION__: string;
 
-figma.showUI(__html__, { width: 340, height: 480, themeColors: true, title: 'Frame Builder' });
+/**
+ * The selection commands do their work and close, with no window at all. Opening
+ * a 340x480 panel to answer a question the selection already answers would be a
+ * click of ceremony for nothing.
+ */
+const runningCommand = Boolean(figma.command) && figma.command !== 'build';
+
+async function runCommand(command: string): Promise<void> {
+  try {
+    let message: string;
+    switch (command) {
+      case 'select-series':
+        message = await selectSeries();
+        break;
+      case 'retag':
+        message = retagSelection(__VERSION__);
+        break;
+      case 'untag':
+        message = untagSelection();
+        break;
+      default:
+        message = `Frame Builder doesn't know the command "${command}".`;
+    }
+    figma.notify(message);
+  } catch (err) {
+    console.error('[Frame Builder]', err);
+    figma.notify(err instanceof Error ? err.message : String(err), { error: true });
+  } finally {
+    figma.closePlugin();
+  }
+}
+
+if (!runningCommand) {
+  figma.showUI(__html__, { width: 340, height: 480, themeColors: true, title: 'Frame Builder' });
+}
 
 function post(msg: MainToUI) {
   figma.ui.postMessage(msg);
@@ -80,16 +115,20 @@ async function handle(msg: UIToMain) {
   }
 }
 
-// Handle messages strictly in order, so a save never races the build that follows it.
-let queue: Promise<void> = Promise.resolve();
+if (runningCommand) {
+  void runCommand(figma.command);
+} else {
+  // Handle messages strictly in order, so a save never races the build after it.
+  let queue: Promise<void> = Promise.resolve();
 
-figma.ui.onmessage = (msg: UIToMain) => {
-  queue = queue.then(async () => {
-    try {
-      await handle(msg);
-    } catch (err) {
-      console.error('[Frame Builder]', err);
-      post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
-    }
-  });
-};
+  figma.ui.onmessage = (msg: UIToMain) => {
+    queue = queue.then(async () => {
+      try {
+        await handle(msg);
+      } catch (err) {
+        console.error('[Frame Builder]', err);
+        post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+      }
+    });
+  };
+}
