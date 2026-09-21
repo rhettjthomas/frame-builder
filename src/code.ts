@@ -1,9 +1,10 @@
 /**
- * Main thread. Owns the Figma document: dialog state storage, and (from milestone 2)
- * frame building, tagging and export. The UI iframe owns rendering and, later, zipping.
+ * Main thread. Owns the Figma document: dialog state storage and frame building,
+ * and later tagging and export. The UI iframe owns rendering and, later, zipping.
  */
 import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY } from './core/state';
+import { buildSeries } from './main/builder';
 
 declare const __VERSION__: string;
 
@@ -27,12 +28,11 @@ async function handle(msg: UIToMain) {
       await figma.clientStorage.setAsync(STATE_KEY, normalizeState(msg.state));
       break;
     case 'build': {
-      // Milestone 2 builds the frames. Until then, confirm the dialog handed over
-      // exactly what the user checked, so the wiring is verifiable in Figma.
-      const frames = msg.items.reduce((sum, item) => sum + item.quantity, 0);
-      console.log(`[Frame Builder] build "${msg.seriesName}" (${msg.seriesId})`, msg.items);
-      figma.notify(`Frame Builder: ${frames} frames queued for "${msg.seriesName}". Building lands in the next milestone.`);
-      post({ type: 'status', message: `${frames} frames queued. Frame building is not wired up yet.` });
+      const { frames } = buildSeries(msg.seriesName, msg.items);
+      const count = frames.length;
+      const label = count === 1 ? '1 frame' : `${count} frames`;
+      figma.notify(`Frame Builder: built ${label} for "${msg.seriesName}"`);
+      post({ type: 'status', message: `Built ${label} in "${msg.seriesName}".` });
       break;
     }
   }

@@ -10,9 +10,10 @@ deliverables, drag the art into place, and export the set.
 
 ## Status
 
-Milestone 1 of 7. The build dialog opens, the checklist persists between runs,
-and the Build button hands the checked deliverables to the main thread. Frame
-creation, tagging and export are not wired up yet.
+Milestone 2 of 7. The build dialog opens, the checklist persists between runs,
+and Build creates the frames: correctly sized and named, white filled except
+Lower Thirds, safe margins as layout grids, arranged in a titled section.
+Tagging and export are not wired up yet.
 
 ## Running it
 
