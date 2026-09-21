@@ -13,6 +13,7 @@ import {
   type Deliverable,
   type Section,
 } from '../core/deliverables';
+import { countFrames, groupForConfirm, type ConfirmGroup, type FoundSeries } from '../core/confirm';
 import type { BuildItem, MainToUI, UIToMain } from '../core/messages';
 import { SHIPPED_PRESETS } from '../core/presets';
 import { frameCount, stateFromPreset, type BuildState } from '../core/state';
@@ -45,11 +46,24 @@ const dom = {
   status: el('status'),
   statusLabel: el('status-label'),
   buildBtn: el<HTMLButtonElement>('build-btn'),
+  exportBtn: el<HTMLButtonElement>('export-btn'),
+  seriesPicker: el<HTMLSelectElement>('series-picker'),
+  seriesSummary: el('series-summary'),
+  confirm: el('confirm'),
+  exportEmpty: el('export-empty'),
+  rescan: el<HTMLButtonElement>('rescan'),
 };
 
 let state: BuildState = stateFromPreset('sermon-series');
 /** Suppresses saving while the first render populates controls from storage. */
 let hydrating = true;
+
+/** Everything the last scan found, and which series the export tab is showing. */
+let foundSeries: FoundSeries[] = [];
+let activeSeriesId = '';
+/** Frames the user has unchecked, by node id. Excluded without being deleted. */
+const excluded = new Set<string>();
+let scanned = false;
 
 function post(msg: UIToMain) {
   parent.postMessage({ pluginMessage: msg }, '*');
@@ -225,6 +239,146 @@ function render() {
   renderFooter();
 }
 
+/* ------------------------------------------------------------------- export */
+
+function activeSeries(): FoundSeries | undefined {
+  return foundSeries.find((s) => s.seriesId === activeSeriesId) ?? foundSeries[0];
+}
+
+function renderSeriesPicker() {
+  dom.seriesPicker.innerHTML = '';
+  for (const series of foundSeries) {
+    const option = document.createElement('option');
+    option.value = series.seriesId;
+    option.textContent = `${series.label} (${series.frames.length})`;
+    dom.seriesPicker.appendChild(option);
+  }
+  const current = activeSeries();
+  if (current) {
+    activeSeriesId = current.seriesId;
+    dom.seriesPicker.value = current.seriesId;
+  }
+}
+
+function renderConfirmGroup(group: ConfirmGroup, container: HTMLElement) {
+  const included = group.frames.filter((f) => !excluded.has(f.nodeId)).length;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'confirm-group';
+
+  const head = document.createElement('div');
+  head.className = 'confirm-head';
+
+  const check = document.createElement('label');
+  check.className = 'check';
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.checked = included === group.frames.length;
+  toggle.indeterminate = included > 0 && included < group.frames.length;
+  toggle.setAttribute('aria-label', `Include all ${group.label}`);
+  const box = document.createElement('span');
+  box.className = 'check-box';
+  check.append(toggle, box);
+
+  const title = document.createElement('span');
+  title.className = 'confirm-title';
+  title.textContent = group.label;
+
+  const count = document.createElement('span');
+  count.className = 'confirm-count';
+  count.textContent = `${included} of ${group.frames.length}`;
+
+  toggle.addEventListener('change', () => {
+    for (const frame of group.frames) {
+      if (toggle.checked) excluded.delete(frame.nodeId);
+      else excluded.add(frame.nodeId);
+    }
+    renderExport();
+  });
+
+  head.append(check, title, count);
+  wrap.appendChild(head);
+
+  const rows = document.createElement('div');
+  rows.className = 'rows';
+  for (const frame of group.frames) {
+    const on = !excluded.has(frame.nodeId);
+    const row = document.createElement('div');
+    row.className = on ? 'found on' : 'found';
+
+    const rowCheck = document.createElement('label');
+    rowCheck.className = 'check';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = on;
+    input.setAttribute('aria-label', frame.name);
+    const rowBox = document.createElement('span');
+    rowBox.className = 'check-box';
+    rowCheck.append(input, rowBox);
+    input.addEventListener('change', () => {
+      if (input.checked) excluded.delete(frame.nodeId);
+      else excluded.add(frame.nodeId);
+      renderExport();
+    });
+
+    const text = document.createElement('div');
+    text.className = 'found-text';
+    // Clicking the name selects the frame in the file, so a surprising count is
+    // something the user can go and look at rather than just read about.
+    const name = document.createElement('button');
+    name.type = 'button';
+    name.className = 'found-name';
+    name.textContent = frame.name;
+    name.title = 'Select this frame in the file';
+    name.addEventListener('click', () => post({ type: 'select-node', nodeId: frame.nodeId }));
+    const meta = document.createElement('span');
+    meta.className = 'found-meta';
+    meta.textContent = `${frame.pageName} · ${frame.group}`;
+    text.append(name, meta);
+
+    row.append(rowCheck, text);
+    if (frame.adopted) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = 'untagged';
+      tag.title = 'Found inside the series section, but carries no tags of its own';
+      row.appendChild(tag);
+    }
+    rows.appendChild(row);
+  }
+  wrap.appendChild(rows);
+  container.appendChild(wrap);
+}
+
+function renderExport() {
+  const series = activeSeries();
+  dom.confirm.innerHTML = '';
+  dom.exportEmpty.hidden = foundSeries.length > 0 || !scanned;
+
+  if (!series) {
+    dom.seriesSummary.textContent = scanned ? '' : 'Scanning the file…';
+    dom.exportBtn.textContent = 'Export frames';
+    dom.exportBtn.disabled = true;
+    return;
+  }
+
+  const groups = groupForConfirm(series.frames);
+  for (const group of groups) renderConfirmGroup(group, dom.confirm);
+
+  const total = countFrames(groups);
+  const included = series.frames.filter((f) => !excluded.has(f.nodeId)).length;
+  const noun = total === 1 ? 'frame' : 'frames';
+  dom.seriesSummary.textContent =
+    total === included
+      ? `${total} ${noun} tagged ${series.seriesId}`
+      : `${included} of ${total} ${noun} tagged ${series.seriesId}`;
+
+  dom.exportBtn.textContent = included === 1 ? 'Export 1 frame' : `Export ${included} frames`;
+  // Exporting itself is the next milestone; finding and confirming is this one.
+  dom.exportBtn.disabled = true;
+  dom.exportBtn.title = 'Exporting arrives in the next milestone';
+}
+
 /* ------------------------------------------------------------------ notices */
 
 function showStatus(message: string) {
@@ -254,6 +408,8 @@ function selectTab(which: 'build' | 'export') {
   dom.panelBuild.hidden = !build;
   dom.panelExport.hidden = build;
   dom.buildBtn.hidden = !build;
+  dom.exportBtn.hidden = build;
+  if (!build && !scanned) post({ type: 'scan' });
 }
 
 function closeMenu() {
@@ -294,6 +450,16 @@ dom.settingsMenu.addEventListener('click', (e) => {
   closeMenu();
 });
 
+dom.seriesPicker.addEventListener('change', () => {
+  activeSeriesId = dom.seriesPicker.value;
+  renderExport();
+});
+
+dom.rescan.addEventListener('click', () => {
+  scanned = false;
+  post({ type: 'scan' });
+});
+
 dom.preset.addEventListener('change', () => {
   state = stateFromPreset(dom.preset.value);
   save();
@@ -325,6 +491,21 @@ window.addEventListener('message', (event: MessageEvent) => {
       render();
       hydrating = false;
       break;
+    case 'scanning':
+      scanned = false;
+      showStatus('Scanning the file…');
+      break;
+    case 'found': {
+      foundSeries = msg.series;
+      scanned = true;
+      // Drop exclusions for frames that have since left the file.
+      const live = new Set(foundSeries.flatMap((s) => s.frames.map((f) => f.nodeId)));
+      for (const id of [...excluded]) if (!live.has(id)) excluded.delete(id);
+      renderSeriesPicker();
+      renderExport();
+      showStatus('');
+      break;
+    }
     case 'status':
       showStatus(msg.message);
       break;

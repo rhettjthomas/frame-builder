@@ -5,6 +5,7 @@
 import type { MainToUI, UIToMain } from './core/messages';
 import { normalizeState, STATE_KEY, type BuildState } from './core/state';
 import { buildSeries } from './main/builder';
+import { findAllSeries, revealNode } from './main/finder';
 
 declare const __VERSION__: string;
 
@@ -58,12 +59,22 @@ async function handle(msg: UIToMain) {
     case 'save-state':
       await saveState(msg.state);
       break;
+    case 'scan': {
+      post({ type: 'scanning' });
+      post({ type: 'found', series: await findAllSeries() });
+      break;
+    }
+    case 'select-node':
+      await revealNode(msg.nodeId);
+      break;
     case 'build': {
       const { frames } = buildSeries(msg.seriesName, msg.seriesId, msg.items, __VERSION__);
       const count = frames.length;
       const label = count === 1 ? '1 frame' : `${count} frames`;
       figma.notify(`Frame Builder: built ${label} for "${msg.seriesName}"`);
       post({ type: 'status', message: `Built ${label} in "${msg.seriesName}".` });
+      // The export tab's picture of the file is now stale.
+      post({ type: 'found', series: await findAllSeries() });
       break;
     }
   }

@@ -45,9 +45,22 @@
   </section>
 
   <section id="panel-export" role="tabpanel" aria-labelledby="tab-export" class="panel" hidden>
-    <div class="empty">
-      <strong>Nothing to export yet</strong>
-      <span class="muted">Finding and exporting tagged frames arrives in a later milestone.</span>
+    <div class="field">
+      <div class="field-head">
+        <label class="field-label" for="series-picker">Series</label>
+        <button type="button" class="link" id="rescan">Rescan file</button>
+      </div>
+      <div class="select">
+        <select id="series-picker"></select>
+      </div>
+      <p class="field-help muted" id="series-summary"></p>
+    </div>
+
+    <div id="confirm"></div>
+
+    <div class="empty" id="export-empty" hidden>
+      <strong>No tagged frames in this file</strong>
+      <span class="muted">Build a series on the Build tab, then come back here.</span>
     </div>
   </section>
 </main>
@@ -58,6 +71,7 @@
     <div class="status-label"><span id="status-label"></span></div>
   </div>
   <button class="primary" id="build-btn" disabled>Build frames</button>
+  <button class="primary" id="export-btn" hidden disabled>Export frames</button>
 </footer>
 
 <script>/*__JS__*/</script>
