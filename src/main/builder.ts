@@ -9,45 +9,50 @@ import type { BuildItem } from '../core/messages';
 const WHITE: SolidPaint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } };
 
 /**
- * The plugin's rose. Figma's own default grid alpha of 0.1 is far too faint on a
- * 3840-wide frame viewed zoomed out, which is most of this library.
+ * The plugin's rose, at the opacity the unsafe band is meant to read at. Figma's
+ * own default of 0.1 disappears on a 3840-wide frame viewed zoomed out, which
+ * describes most of this library.
  */
-const GRID_COLOR = { r: 0.859, g: 0.325, b: 0.459, a: 0.15 };
+const GRID_COLOR = { r: 0.859, g: 0.325, b: 0.459, a: 0.3 };
 
 export interface BuildResult {
   section: SectionNode;
   frames: FrameNode[];
 }
 
+/** One edge band: a single grid section pinned to one edge of the frame. */
+function band(pattern: 'ROWS' | 'COLUMNS', alignment: 'MIN' | 'MAX', size: number): LayoutGrid {
+  return {
+    pattern,
+    alignment,
+    count: 1,
+    sectionSize: size,
+    offset: 0,
+    gutterSize: 0,
+    visible: true,
+    color: GRID_COLOR,
+  };
+}
+
 /**
- * Safe margins are layout grids rather than drawn rectangles: grids are visible
- * while designing and never rasterize into an export, so there is nothing to
- * hide or delete before delivery. STRETCH alignment insets both edges by `offset`,
- * which is why margins are modelled as a symmetric pair.
+ * Safe margins are layout grids rather than drawn rectangles: grids render above
+ * whatever art is dragged into the frame, and never rasterize into an export, so
+ * there is nothing to hide or delete before delivery.
+ *
+ * The bands mark the unsafe edges and leave the safe area clear, which is the way
+ * round a designer reads them. That takes four grids rather than one stretched
+ * pair, because a layout grid always spans the full opposite dimension and can
+ * only be pinned to one edge at a time. Each corner therefore sits under two
+ * bands and reads darker, which is correct: a corner is the least safe place on
+ * the frame.
  */
 export function safeGrids(safe: SafeMargin): LayoutGrid[] {
   const grids: LayoutGrid[] = [];
   if (safe.sides > 0) {
-    grids.push({
-      pattern: 'COLUMNS',
-      alignment: 'STRETCH',
-      count: 1,
-      gutterSize: 0,
-      offset: safe.sides,
-      visible: true,
-      color: GRID_COLOR,
-    });
+    grids.push(band('COLUMNS', 'MIN', safe.sides), band('COLUMNS', 'MAX', safe.sides));
   }
   if (safe.ends > 0) {
-    grids.push({
-      pattern: 'ROWS',
-      alignment: 'STRETCH',
-      count: 1,
-      gutterSize: 0,
-      offset: safe.ends,
-      visible: true,
-      color: GRID_COLOR,
-    });
+    grids.push(band('ROWS', 'MIN', safe.ends), band('ROWS', 'MAX', safe.ends));
   }
   return grids;
 }
