@@ -3,7 +3,7 @@
  * and later tagging and export. The UI iframe owns rendering and, later, zipping.
  */
 import type { MainToUI, UIToMain } from './core/messages';
-import { normalizeState, STATE_KEY } from './core/state';
+import { normalizeState, STATE_KEY, type BuildState } from './core/state';
 import { buildSeries } from './main/builder';
 
 declare const __VERSION__: string;
@@ -14,9 +14,40 @@ function post(msg: MainToUI) {
   figma.ui.postMessage(msg);
 }
 
+/**
+ * clientStorage needs a plugin ID and can fail for reasons the user can do
+ * nothing about. Losing the saved checklist is a far smaller problem than the
+ * plugin refusing to open, so storage failures degrade to the defaults and say
+ * so once, rather than throwing.
+ */
+let storageWarned = false;
+
+function warnStorage(err: unknown) {
+  console.warn('[Frame Builder] client storage unavailable', err);
+  if (storageWarned) return;
+  storageWarned = true;
+  post({ type: 'status', message: 'Checklist changes will not be remembered on this machine.' });
+}
+
+async function loadState(): Promise<BuildState> {
+  try {
+    return normalizeState(await figma.clientStorage.getAsync(STATE_KEY));
+  } catch (err) {
+    warnStorage(err);
+    return normalizeState(undefined);
+  }
+}
+
+async function saveState(state: BuildState) {
+  try {
+    await figma.clientStorage.setAsync(STATE_KEY, normalizeState(state));
+  } catch (err) {
+    warnStorage(err);
+  }
+}
+
 async function sendInit() {
-  const stored = await figma.clientStorage.getAsync(STATE_KEY);
-  post({ type: 'init', state: normalizeState(stored), version: __VERSION__ });
+  post({ type: 'init', state: await loadState(), version: __VERSION__ });
 }
 
 async function handle(msg: UIToMain) {
@@ -25,7 +56,7 @@ async function handle(msg: UIToMain) {
       await sendInit();
       break;
     case 'save-state':
-      await figma.clientStorage.setAsync(STATE_KEY, normalizeState(msg.state));
+      await saveState(msg.state);
       break;
     case 'build': {
       const { frames } = buildSeries(msg.seriesName, msg.items);
