@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "Figma plugin that builds every deliverable frame for a sermon series and sets them up for Figma export.",
+  "license": "MIT",
+  "author": "Midwood Road LLC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rhettjthomas/frame-builder.git"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",

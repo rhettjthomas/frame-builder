@@ -83,12 +83,8 @@ Then in Figma: Plugins, Development, Import plugin from manifest, and pick
 `manifest.json`. Re-import rather than re-run whenever the manifest itself
 changes.
 
-The manifest carries a placeholder `id`. It needs one even in development,
-because `figma.clientStorage` is namespaced by plugin ID and refuses to read or
-write without it. Replace it with the real ID before publishing: in Figma, create
-the plugin through Plugins, Development, New plugin, and copy the `id` out of the
-manifest it generates. Swapping the ID starts the saved checklist from the
-defaults once, which is harmless.
+The manifest needs its `id` even in development, because `figma.clientStorage`
+is namespaced by plugin ID and refuses to read or write without one.
 
 Other scripts: `npm run build` for a one-off minified build, `npm run typecheck`,
 and `npm test`.
@@ -97,6 +93,8 @@ The plugin declares no network access and never sends anything anywhere. Presets
 and settings are stored with `figma.clientStorage`, which is local to your
 machine.
 
----
+## License
 
-By [Midwood Road LLC](https://midwoodroad.com). Free to use.
+MIT. See [LICENSE](LICENSE).
+
+By [Midwood Road LLC](https://midwoodroad.com).
